@@ -1,41 +1,63 @@
 const authService = require('../services/authService')
 const logger = require('../utils/logger')
 
-exports.login = async (req, res, next) => {
-   try {
-      const { email, password } = req.body
-      const result = await authService.login(email, password)
+const { User } = require('../models')
 
-      res.json({
-         success: true,
-         message: '로그인 성공',
-         data: result,
+exports.register = async (req, res) => {
+   try {
+      const { email, password, name, userid, phone } = req.body
+
+      const existingUser = await User.findOne({ where: { email } })
+      if (existingUser) {
+         return res.status(400).json({ success: false, message: '이미 가입된 이메일입니다.' })
+      }
+
+      const existingUserid = await User.findOne({ where: { userid } })
+      if (existingUserid) {
+         return res.status(400).json({ success: false, message: '이미 사용 중인 사용자 ID입니다.' })
+      }
+
+      const newUser = await User.create({
+         email,
+         password,
+         name,
+         userid,
+         phone,
       })
+
+      res.status(201).json({ success: true, message: '회원가입 성공', user: newUser })
    } catch (error) {
-      logger.error('Login error:', error)
-      next(error)
+      console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
    }
 }
 
-exports.register = async (req, res, next) => {
+exports.login = async (req, res) => {
    try {
-      const userData = req.body
-      const result = await authService.register(userData)
+      const { email, password } = req.body
 
-      res.status(201).json({
-         success: true,
-         message: '회원가입 성공',
-         data: result,
-      })
+      const user = await User.findOne({ where: { email } })
+      if (!user) {
+         return res.status(400).json({ success: false, message: '존재하지 않는 사용자입니다.' })
+      }
+
+      const isMatch = await user.validatePassword(password)
+      if (!isMatch) {
+         return res.status(400).json({ success: false, message: '비밀번호가 틀렸습니다.' })
+      }
+
+      res.json({ success: true, message: '로그인 성공', user })
    } catch (error) {
-      logger.error('Register error:', error)
-      next(error)
+      console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
    }
 }
 
 exports.getProfile = async (req, res) => {
-   res.json({
-      success: true,
-      data: req.user,
-   })
+   try {
+      res.json({ success: true, user: req.user })
+   } catch (error) {
+      console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
 }

@@ -38,12 +38,12 @@ exports.login = async (req, res) => {
 
       const user = await User.findOne({ where: { email } })
       if (!user) {
-         return res.status(400).json({ success: false, message: '존재하지 않는 사용자입니다.' })
+         return res.json({ success: false, message: '존재하지 않는 사용자입니다.' })
       }
 
       const isMatch = await user.validatePassword(password)
       if (!isMatch) {
-         return res.status(400).json({ success: false, message: '비밀번호가 틀렸습니다.' })
+         return res.json({ success: false, message: '비밀번호가 틀렸습니다.' })
       }
 
       res.json({ success: true, message: '로그인 성공', user })

@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { isAuthenticated, isAdmin } = require('../middlewares/auth')
+const { isAuthenticated, isAdmin } = require('../middlewares/authMiddleware')
 const { subscriptionLimiter } = require('../middlewares/rateLimiter')
 const userPlanController = require('../controllers/userPlanController')
 

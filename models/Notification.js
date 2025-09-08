@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
    const Notification = sequelize.define(
-      'Notification',
+      'Notifications', // 테이블 이름을 복수형으로 변경
       {
          id: {
             type: DataTypes.INTEGER,
@@ -22,14 +22,14 @@ module.exports = (sequelize, DataTypes) => {
          agencyId: {
             type: DataTypes.INTEGER,
             references: {
-               model: 'Agency',
+               model: 'agencies',
                key: 'id',
             },
          },
          serviceId: {
             type: DataTypes.INTEGER,
             references: {
-               model: 'AdditionalServices',
+               model: 'additional_services',
                key: 'id',
             },
          },

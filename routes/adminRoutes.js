@@ -11,7 +11,7 @@ router.use(isAdmin)
 router.get('/users', adminController.getAllUsers)
 router.get('/users/:id', adminController.getUser)
 router.patch('/users/:id/status', adminController.updateUserStatus)
-router.patch('/users/:id/role', adminController.updateUserRole)
+router.patch('/users/:id/role', adminController.updateUserStatus)
 
 // 통계
 router.get('/statistics', adminController.getStatistics)

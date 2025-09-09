@@ -1,6 +1,26 @@
 const { User, Agency, Plans, Surveys, AdditionalServices } = require('../models')
+const Admin = require('../models/Admin')
 const ApiError = require('../utils/apiError')
 const { validateEmail } = require('../utils/validators')
+
+exports.registerAdmin = async (req, res, next) => {
+   try {
+      const { email, password } = req.body
+      if (!email || !password) {
+         throw new ApiError(400, '이메일과 비밀번호는 필수입니다.')
+      }
+
+      const newAdmin = await Admin.create({
+         email,
+         name: 'admin',
+         password,
+      })
+
+      res.status(201).json({ success: true, message: '관리자 등록 성공', admin: newAdmin })
+   } catch (error) {
+      next(error)
+   }
+}
 
 // 사용자 목록 조회
 exports.getAllUsers = async (req, res, next) => {

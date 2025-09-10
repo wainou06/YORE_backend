@@ -304,6 +304,31 @@ exports.updatePlan = async (req, res, next) => {
    }
 }
 
+// 통신사별 요금제 목록 조회
+exports.getAgencyPlans = async (req, res, next) => {
+   try {
+      const plans = await Plans.findAll({
+         where: {
+            agencyId: req.agency.id,
+         },
+         order: [['createdAt', 'DESC']],
+         include: [
+            {
+               model: Agency,
+               attributes: ['name', 'id'],
+            },
+         ],
+      })
+
+      res.json({
+         success: true,
+         data: plans,
+      })
+   } catch (error) {
+      next(error)
+   }
+}
+
 // 요금제 삭제
 exports.deletePlan = async (req, res, next) => {
    try {

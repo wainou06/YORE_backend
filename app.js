@@ -49,7 +49,19 @@ app.use(
       credentials: true,
    })
 )
-app.use(morgan('dev'))
+// morgan은 에러 상황에만 로그를 남기도록 설정
+app.use(
+   morgan('dev', {
+      skip: function (req, res) {
+         return res.statusCode < 400
+      },
+      stream: {
+         write: function (message) {
+            // morgan의 로그를 콘솔에 직접 출력하지 않고 무시
+         },
+      },
+   })
+)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

@@ -16,6 +16,15 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING(50),
             allowNull: true,
          },
+         userId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            unique: true,
+            references: {
+               model: 'users',
+               key: 'id',
+            },
+         },
       },
       {
          timestamps: true,
@@ -24,9 +33,9 @@ module.exports = (sequelize, DataTypes) => {
    )
 
    Agency.associate = (models) => {
-      Agency.hasMany(models.User, {
-         foreignKey: 'agencyId',
-         as: 'users',
+      Agency.belongsTo(models.User, {
+         foreignKey: 'userId',
+         as: 'user',
       })
       Agency.hasMany(models.Plans, {
          foreignKey: 'agencyId',

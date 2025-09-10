@@ -1,16 +1,14 @@
 const { Plans, PlanImgs, Agency, AdditionalServices, UserServices } = require('../models')
 const { validatePlanData } = require('../utils/validators')
 const ApiError = require('../utils/apiError')
+const { upload, getFileUrl, deleteFile, decodeFilename } = require('../utils/fileUpload')
+const path = require('path')
 
 // 요금제 생성 (통신사용)
 exports.createPlan = async (req, res, next) => {
    try {
       const planData = req.body
-      const agencyId = req.user.agencyId
-
-      if (!agencyId) {
-         throw new ApiError(403, '통신사 권한이 없습니다.')
-      }
+      const agencyId = req.agency.id
 
       const validationError = validatePlanData(planData)
       if (validationError) {
@@ -59,13 +57,31 @@ exports.createPlan = async (req, res, next) => {
          await UserServices.bulkCreate(planServices)
       }
 
+      // 이미지 파일 처리
+      if (req.files && req.files.length > 0) {
+         const planImgs = req.files.map((file, index) => {
+            const today = new Date()
+            const datePath = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`
+            const relativePath = path.join(datePath, file.filename)
+
+            return {
+               planId: plan.id,
+               imgURL: getFileUrl(relativePath),
+               originName: decodeFilename(file.filename),
+               mainImg: index === 0 ? 'Y' : 'N', // 첫 번째 이미지를 대표 이미지로 설정
+            }
+         })
+
+         await PlanImgs.bulkCreate(planImgs)
+      }
+
       // 생성된 요금제 조회 (연결된 정보 포함)
       const createdPlan = await Plans.findByPk(plan.id, {
          include: [
             {
                model: PlanImgs,
                as: 'images',
-               attributes: ['url', 'isMain'],
+               attributes: ['url', 'originalName', 'isMain'],
             },
             {
                model: AdditionalServices,
@@ -133,8 +149,8 @@ exports.getAllPlans = async (req, res, next) => {
          }
       }
       // 통신사는 자신의 요금제만 볼 수 있음
-      else if (req.user?.agencyId) {
-         where.agencyId = req.user.agencyId
+      else if (req.user?.access === 'agency') {
+         where.agencyId = req.agency.id
          if (status) {
             where.approvalStatus = status
          }
@@ -207,7 +223,7 @@ exports.getPlan = async (req, res, next) => {
       }
 
       // 승인되지 않은 요금제는 관리자와 해당 통신사만 조회 가능
-      if (plan.approvalStatus !== 'approved' && !req.user?.isAdmin && req.user?.agencyId !== plan.agencyId) {
+      if (plan.approvalStatus !== 'approved' && !req.user?.isAdmin && !(req.user?.access === 'agency' && req.agency?.id === plan.agencyId)) {
          throw new ApiError(403, '접근 권한이 없습니다.')
       }
 
@@ -232,7 +248,11 @@ exports.updatePlan = async (req, res, next) => {
       }
 
       // 통신사는 자신의 요금제만 수정 가능
-      if (!req.user.isAdmin && req.user.agencyId !== plan.agencyId) {
+      if (!req.user.isAdmin && req.user.access === 'agency') {
+         if (req.agency.id !== plan.agencyId) {
+            throw new ApiError(403, '수정 권한이 없습니다.')
+         }
+      } else if (!req.user.isAdmin) {
          throw new ApiError(403, '수정 권한이 없습니다.')
       }
 
@@ -295,7 +315,11 @@ exports.deletePlan = async (req, res, next) => {
       }
 
       // 통신사는 자신의 요금제만 삭제 가능
-      if (!req.user.isAdmin && req.user.agencyId !== plan.agencyId) {
+      if (!req.user.isAdmin && req.user.access === 'agency') {
+         if (req.agency.id !== plan.agencyId) {
+            throw new ApiError(403, '삭제 권한이 없습니다.')
+         }
+      } else if (!req.user.isAdmin) {
          throw new ApiError(403, '삭제 권한이 없습니다.')
       }
 

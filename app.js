@@ -30,6 +30,19 @@ passportConfig()
 
 // Middleware
 app.use(helmet())
+
+// 정적 파일 제공 설정
+app.use(
+   '/uploads',
+   express.static(path.join(__dirname, 'uploads'), {
+      // 한글 파일명 처리를 위한 설정
+      setHeaders: (res, filePath) => {
+         const filename = path.basename(filePath)
+         const encodedFilename = encodeURIComponent(filename)
+         res.setHeader('Content-Disposition', `inline; filename="${encodedFilename}"`)
+      },
+   })
+)
 app.use(
    cors({
       origin: process.env.FRONTEND_URL,

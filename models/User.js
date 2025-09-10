@@ -26,14 +26,6 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.ENUM('user', 'agency'),
             defaultValue: 'user',
          },
-         agencyId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            references: {
-               model: 'agencies',
-               key: 'id',
-            },
-         },
          email: {
             type: DataTypes.STRING(100),
             allowNull: false,
@@ -84,8 +76,8 @@ module.exports = (sequelize, DataTypes) => {
    )
 
    User.associate = (models) => {
-      User.belongsTo(models.Agency, {
-         foreignKey: 'agencyId',
+      User.hasOne(models.Agency, {
+         foreignKey: 'userId',
          as: 'agency',
       })
       User.hasMany(models.UserPlan, {

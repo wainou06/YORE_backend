@@ -5,7 +5,7 @@ const { User } = require('../models')
 
 exports.register = async (req, res) => {
    try {
-      const { email, password, name, userid, phone } = req.body
+      const { email, password, name, userid, phone, access } = req.body
 
       const existingUser = await User.findOne({ where: { email } })
       if (existingUser) {
@@ -23,6 +23,7 @@ exports.register = async (req, res) => {
          name,
          userid,
          phone,
+         access: access || 'user',
       })
 
       res.status(201).json({ success: true, message: '회원가입 성공', user: newUser })
@@ -34,7 +35,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
    try {
-      const { email, password } = req.body
+      const { email, password, userType } = req.body
 
       const user = await User.findOne({ where: { email } })
       if (!user) {
@@ -44,6 +45,10 @@ exports.login = async (req, res) => {
       const isMatch = await user.validatePassword(password)
       if (!isMatch) {
          return res.json({ success: false, message: '비밀번호가 틀렸습니다.' })
+      }
+
+      if (user.access !== (userType === 'personal' ? 'user' : 'agency')) {
+         return res.json({ success: false, message: '잘못된 사용자 유형입니다.' })
       }
 
       res.json({ success: true, message: '로그인 성공', user })

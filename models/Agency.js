@@ -12,6 +12,14 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             unique: true,
          },
+         businessNumber: {
+            type: DataTypes.STRING(10),
+            allowNull: false,
+            unique: true,
+            validate: {
+               is: /^[0-9]{10}$/, // 10자리 숫자만 허용
+            },
+         },
          managerName: {
             type: DataTypes.STRING(50),
             allowNull: true,

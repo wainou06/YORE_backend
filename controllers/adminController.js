@@ -2,6 +2,7 @@ const { User, Agency, Plans, Surveys, AdditionalServices } = require('../models'
 const { Admin } = require('../models')
 const ApiError = require('../utils/apiError')
 
+//관리자 생성
 exports.registerAdmin = async (req, res, next) => {
    try {
       const { email, password } = req.body
@@ -17,16 +18,15 @@ exports.registerAdmin = async (req, res, next) => {
 
       res.status(201).json({ success: true, message: '관리자 등록 성공', admin: admin })
    } catch (error) {
-      error.status = 500
-      error.message = `관리자 등록 중 오류가 발생했습니다. ${error}`
       next(error)
    }
 }
 
+//관리자 로그인
 exports.loginAdmin = async (req, res, next) => {
    try {
-      console.log(JSON.stringify(req.body))
       const { email, password } = req.body
+
       if (!email || !password) {
          throw new ApiError(400, '이메일과 비밀번호는 필수입니다.')
       }
@@ -36,14 +36,12 @@ exports.loginAdmin = async (req, res, next) => {
          throw new ApiError(404, '존재하지 않는 관리자입니다.')
       }
       const isMatch = await admin.validatePassword(password)
-      if (isMatch) {
+      if (!isMatch) {
          throw new ApiError(401, '비밀번호가 틀렸습니다.')
       }
 
-      res.status(200).json({ success: true, message: '관리자 로그인 성공' })
+      res.status(200).json({ success: true, message: '관리자 로그인 성공', admin })
    } catch (error) {
-      error.status = 500
-      error.message = error
       next(error)
    }
 }

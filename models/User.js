@@ -34,11 +34,6 @@ module.exports = (sequelize, DataTypes) => {
                isEmail: true,
             },
          },
-         kakaoId: {
-            type: DataTypes.STRING(100),
-            allowNull: true,
-            // unique: true,
-         },
          phone: {
             type: DataTypes.STRING(20),
             allowNull: true,

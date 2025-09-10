@@ -1,6 +1,21 @@
 const { ServiceAnalytics, AdditionalServices, Agency } = require('../models')
+const User = require('../models/User')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
+
+exports.getTotalUsers = async (req, res, next) => {
+   try {
+      const totalUsers = await User.count()
+
+      res.status(200).json({
+         success: true,
+         total: totalUsers,
+         message: '총 사용자 수를 성공적으로 가져왔습니다.',
+      })
+   } catch (error) {
+      next(error)
+   }
+}
 
 exports.getServiceStats = async (req, res, next) => {
    try {

@@ -1,6 +1,8 @@
 const { Plans, PlanImgs, Agency, AdditionalServices, UserServices } = require('../models')
 const { validatePlanData } = require('../utils/validators')
 const ApiError = require('../utils/apiError')
+const { upload, getFileUrl, deleteFile, decodeFilename } = require('../utils/fileUpload')
+const path = require('path')
 
 // 요금제 생성 (통신사용)
 exports.createPlan = async (req, res, next) => {
@@ -59,13 +61,31 @@ exports.createPlan = async (req, res, next) => {
          await UserServices.bulkCreate(planServices)
       }
 
+      // 이미지 파일 처리
+      if (req.files && req.files.length > 0) {
+         const planImgs = req.files.map((file, index) => {
+            const today = new Date()
+            const datePath = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`
+            const relativePath = path.join(datePath, file.filename)
+
+            return {
+               planId: plan.id,
+               imgURL: getFileUrl(relativePath),
+               originName: decodeFilename(file.filename),
+               mainImg: index === 0 ? 'Y' : 'N', // 첫 번째 이미지를 대표 이미지로 설정
+            }
+         })
+
+         await PlanImgs.bulkCreate(planImgs)
+      }
+
       // 생성된 요금제 조회 (연결된 정보 포함)
       const createdPlan = await Plans.findByPk(plan.id, {
          include: [
             {
                model: PlanImgs,
                as: 'images',
-               attributes: ['url', 'isMain'],
+               attributes: ['url', 'originalName', 'isMain'],
             },
             {
                model: AdditionalServices,

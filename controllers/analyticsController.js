@@ -34,11 +34,32 @@ exports.getServiceStats = async (req, res, next) => {
          where.serviceId = serviceId
       }
 
+      // 관리자/유저 분기 처리
+      const userOrAdmin = req.user || req.admin
+      if (!userOrAdmin) {
+         return res.status(401).json({ success: false, message: '인증 정보 없음' })
+      }
+
       // 통신사 필터 (관리자만 전체 조회 가능)
-      if (!req.user?.isAdmin) {
-         where.agencyId = req.user.agencyId
-      } else if (agencyId) {
-         where.agencyId = agencyId
+      if (req.admin) {
+         // 관리자: agencyId 쿼리 파라미터가 있으면 해당 통신사만, 없으면 전체
+         if (agencyId) {
+            where.agencyId = agencyId
+         }
+      } else if (req.user) {
+         // 일반 유저: 본인 소속 통신사만 (agencyId가 있을 때만)
+         if (req.user.agencyId) {
+            where.agencyId = req.user.agencyId
+         } else {
+            // agencyId가 없으면 빈 결과 반환
+            return res.status(200).json({
+               status: 'success',
+               data: {
+                  stats: [],
+                  summary: { totalViews: 0, totalPurchases: 0, totalRevenue: 0 },
+               },
+            })
+         }
       }
 
       const stats = await ServiceAnalytics.findAll({
@@ -46,10 +67,12 @@ exports.getServiceStats = async (req, res, next) => {
          include: [
             {
                model: AdditionalServices,
+               as: 'service',
                attributes: ['name', 'price', 'category'],
             },
             {
                model: Agency,
+               as: 'agency',
                attributes: ['name', 'code'],
             },
          ],

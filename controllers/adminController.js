@@ -40,11 +40,15 @@ exports.loginAdmin = async (req, res, next) => {
          throw new ApiError(401, '비밀번호가 틀렸습니다.')
       }
 
-      res.status(200).json({ success: true, message: '관리자 로그인 성공', admin })
+      const { generateJWT } = require('../utils/auth')
+      const token = generateJWT(admin)
+
+      res.status(200).json({ success: true, message: '관리자 로그인 성공', token, admin })
    } catch (error) {
       next(error)
    }
 }
+
 // 사용자 목록 조회
 exports.getAllUsers = async (req, res, next) => {
    try {

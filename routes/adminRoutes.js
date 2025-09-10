@@ -17,7 +17,6 @@ router.post('/login', adminController.loginAdmin)
 router.get('/users', adminController.getAllUsers)
 router.get('/users/:id', adminController.getUser)
 router.patch('/users/:id/status', adminController.updateUserStatus)
-router.patch('/users/:id/role', adminController.updateUserStatus)
 
 // 통계
 router.get('/statistics', adminController.getStatistics)

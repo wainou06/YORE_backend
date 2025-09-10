@@ -1,6 +1,15 @@
 const app = require('./app')
 const { sequelize } = require('./models')
 const logger = require('./utils/logger')
+const path = require('path')
+const fs = require('fs')
+
+// uploads 디렉토리 생성
+const uploadsDir = path.join(__dirname, 'uploads')
+if (!fs.existsSync(uploadsDir)) {
+   fs.mkdirSync(uploadsDir, { recursive: true })
+   logger.info('uploads 디렉토리가 생성되었습니다.')
+}
 
 const PORT = process.env.PORT || 3000
 

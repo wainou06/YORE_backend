@@ -8,11 +8,7 @@ const path = require('path')
 exports.createPlan = async (req, res, next) => {
    try {
       const planData = req.body
-      const agencyId = req.user.agencyId
-
-      if (!agencyId) {
-         throw new ApiError(403, '통신사 권한이 없습니다.')
-      }
+      const agencyId = req.agency.id
 
       const validationError = validatePlanData(planData)
       if (validationError) {
@@ -153,8 +149,8 @@ exports.getAllPlans = async (req, res, next) => {
          }
       }
       // 통신사는 자신의 요금제만 볼 수 있음
-      else if (req.user?.agencyId) {
-         where.agencyId = req.user.agencyId
+      else if (req.user?.access === 'agency') {
+         where.agencyId = req.agency.id
          if (status) {
             where.approvalStatus = status
          }
@@ -227,7 +223,7 @@ exports.getPlan = async (req, res, next) => {
       }
 
       // 승인되지 않은 요금제는 관리자와 해당 통신사만 조회 가능
-      if (plan.approvalStatus !== 'approved' && !req.user?.isAdmin && req.user?.agencyId !== plan.agencyId) {
+      if (plan.approvalStatus !== 'approved' && !req.user?.isAdmin && !(req.user?.access === 'agency' && req.agency?.id === plan.agencyId)) {
          throw new ApiError(403, '접근 권한이 없습니다.')
       }
 
@@ -252,7 +248,11 @@ exports.updatePlan = async (req, res, next) => {
       }
 
       // 통신사는 자신의 요금제만 수정 가능
-      if (!req.user.isAdmin && req.user.agencyId !== plan.agencyId) {
+      if (!req.user.isAdmin && req.user.access === 'agency') {
+         if (req.agency.id !== plan.agencyId) {
+            throw new ApiError(403, '수정 권한이 없습니다.')
+         }
+      } else if (!req.user.isAdmin) {
          throw new ApiError(403, '수정 권한이 없습니다.')
       }
 
@@ -315,7 +315,11 @@ exports.deletePlan = async (req, res, next) => {
       }
 
       // 통신사는 자신의 요금제만 삭제 가능
-      if (!req.user.isAdmin && req.user.agencyId !== plan.agencyId) {
+      if (!req.user.isAdmin && req.user.access === 'agency') {
+         if (req.agency.id !== plan.agencyId) {
+            throw new ApiError(403, '삭제 권한이 없습니다.')
+         }
+      } else if (!req.user.isAdmin) {
          throw new ApiError(403, '삭제 권한이 없습니다.')
       }
 

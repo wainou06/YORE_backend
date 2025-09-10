@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const { User } = require('../models')
+const { User, Agency } = require('../models')
 
 // 기본 인증 미들웨어
 exports.isAuthenticated = async (req, res, next) => {
@@ -55,12 +55,31 @@ exports.isAdmin = (req, res, next) => {
 }
 
 // 통신사 권한 확인
-exports.isAgency = (req, res, next) => {
-   if (!req.user || req.user.access !== 'agency' || !req.user.agencyId) {
-      return res.status(403).json({
+exports.isAgency = async (req, res, next) => {
+   try {
+      if (!req.user || req.user.access !== 'agency') {
+         return res.status(403).json({
+            success: false,
+            message: '통신사만 접근할 수 있습니다.',
+         })
+      }
+
+      // 통신사 정보 확인
+      const agency = await Agency.findOne({ where: { userId: req.user.id } })
+      if (!agency) {
+         return res.status(403).json({
+            success: false,
+            message: '등록된 통신사 정보가 없습니다.',
+         })
+      }
+
+      // 통신사 정보를 req 객체에 추가
+      req.agency = agency
+      next()
+   } catch (error) {
+      return res.status(500).json({
          success: false,
-         message: '통신사만 접근할 수 있습니다.',
+         message: '서버 오류가 발생했습니다.',
       })
    }
-   next()
 }

@@ -1,6 +1,7 @@
 const { User, Agency, Plans, Surveys, AdditionalServices } = require('../models')
 const { Admin } = require('../models')
 const ApiError = require('../utils/apiError')
+const jwt = require('jsonwebtoken')
 
 //관리자 생성
 exports.registerAdmin = async (req, res, next) => {
@@ -40,7 +41,11 @@ exports.loginAdmin = async (req, res, next) => {
          throw new ApiError(401, '비밀번호가 틀렸습니다.')
       }
 
-      res.status(200).json({ success: true, message: '관리자 로그인 성공', admin })
+      const token = jwt.sign({ id: admin.id, email: admin.email }, process.env.JWT_SECRET, { expiresIn: '1h' })
+
+      const resAdmin = { id: admin.id, name: admin.name, email: admin.email }
+
+      res.status(200).json({ success: true, message: '관리자 로그인 성공', token, admin: resAdmin })
    } catch (error) {
       next(error)
    }

@@ -1,5 +1,6 @@
 const authService = require('../services/authService')
 const logger = require('../utils/logger')
+const jwt = require('jsonwebtoken')
 
 const { User, Agency } = require('../models')
 
@@ -87,7 +88,9 @@ exports.login = async (req, res) => {
          return res.json({ success: false, message: '기업 정보를 찾을 수 없습니다.' })
       }
 
-      res.json({ success: true, message: '로그인 성공', user })
+      const token = jwt.sign({ id: user.id, access: user.access }, process.env.JWT_SECRET, { expiresIn: '7d' })
+
+      return res.json({ success: true, message: '로그인 성공', token, user })
    } catch (error) {
       console.error(error)
       res.status(500).json({ success: false, message: '서버 오류' })
@@ -117,6 +120,60 @@ exports.getProfile = async (req, res) => {
       res.json({ success: true, user })
    } catch (error) {
       console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+// 비밀번호 변경
+exports.changePassword = async (req, res) => {
+   try {
+      const { currentPassword, newPassword } = req.body
+      const user = await User.findByPk(req.user.id)
+      if (!user) return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
+
+      const isMatch = await user.validatePassword(currentPassword)
+      if (!isMatch) return res.status(400).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' })
+
+      user.password = newPassword
+      await user.save()
+
+      res.json({ success: true, message: '비밀번호 변경 완료' })
+   } catch (err) {
+      console.error(err)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+// 이메일 변경
+exports.changeEmail = async (req, res) => {
+   try {
+      const { newEmail } = req.body
+
+      const exists = await User.findOne({ where: { email: newEmail } })
+      if (exists) return res.status(400).json({ success: false, message: '이미 존재하는 이메일입니다.' })
+
+      const user = await User.findByPk(req.user.id)
+      user.email = newEmail
+      await user.save()
+
+      res.json({ success: true, message: '이메일 변경 완료' })
+   } catch (err) {
+      console.error(err)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+// 생일 변경
+exports.changeBirth = async (req, res) => {
+   try {
+      const { birth } = req.body
+      const user = await User.findByPk(req.user.id)
+      user.birth = birth
+      await user.save()
+
+      res.json({ success: true, message: '생일이 업데이트되었습니다.' })
+   } catch (err) {
+      console.error(err)
       res.status(500).json({ success: false, message: '서버 오류' })
    }
 }

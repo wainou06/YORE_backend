@@ -20,4 +20,8 @@ router.post('/login', validate(loginValidation), authController.login)
 router.post('/register', validate(registerValidation), authController.register)
 router.get('/profile', isAuthenticated, authController.getProfile)
 
+router.post('/change-password', isAuthenticated, authController.changePassword)
+router.post('/change-email', isAuthenticated, authController.changeEmail)
+router.post('/change-birth', isAuthenticated, authController.changeBirth)
+
 module.exports = router

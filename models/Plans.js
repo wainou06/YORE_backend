@@ -12,37 +12,6 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             comment: '요금제명',
          },
-         basePrice: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            comment: '기본 요금',
-         },
-         discountAmount: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            defaultValue: 0,
-            comment: '할인 금액',
-         },
-         finalPrice: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            comment: '최종 요금',
-         },
-         contractPeriod: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            comment: '약정 기간(월)',
-         },
-         data: {
-            type: DataTypes.STRING(100),
-            allowNull: false,
-            comment: '데이터 제공량',
-         },
-         voice: {
-            type: DataTypes.STRING(100),
-            allowNull: false,
-            comment: '통화 제공량',
-         },
          agencyId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -51,26 +20,51 @@ module.exports = (sequelize, DataTypes) => {
                key: 'id',
             },
          },
-         recommendedVoice: {
-            type: DataTypes.STRING(50),
-            allowNull: true,
-            comment: '권장 통화량',
-         },
-         recommendedData: {
-            type: DataTypes.STRING(50),
-            allowNull: true,
-            comment: '권장 데이터 사용량',
-         },
-         recommendedAge: {
-            type: DataTypes.STRING(50),
-            allowNull: true,
-            comment: '권장 연령대',
-         },
-         networkType: {
-            type: DataTypes.ENUM('3G', 'LTE', '5G'),
+         voice: {
+            type: DataTypes.STRING(10),
             allowNull: false,
-            defaultValue: 'LTE',
-            comment: '네트워크 타입',
+            comment: '통화 제공량 (분, 무제한:999999)',
+            validate: {
+               isValidVoice(value) {
+                  if (value !== '999999' && isNaN(value)) {
+                     throw new Error('통화량은 숫자나 무제한(999999)이어야 합니다')
+                  }
+               },
+            },
+         },
+         data: {
+            type: DataTypes.STRING(10),
+            allowNull: false,
+            comment: '데이터 제공량 (MB, 무제한:999999)',
+            validate: {
+               isValidData(value) {
+                  if (value !== '999999' && isNaN(value)) {
+                     throw new Error('데이터 사용량은 숫자나 무제한(999999)이어야 합니다')
+                  }
+               },
+            },
+         },
+         sms: {
+            type: DataTypes.STRING(10),
+            allowNull: false,
+            comment: '문자 제공량 (건, 무제한:999999)',
+            validate: {
+               isValidSms(value) {
+                  if (value !== '999999' && isNaN(value)) {
+                     throw new Error('문자 발송량은 숫자나 무제한(999999)이어야 합니다')
+                  }
+               },
+            },
+         },
+         type: {
+            type: DataTypes.ENUM('2', '3', '6'),
+            allowNull: false,
+            comment: '서비스 타입(3G:2, LTE:3, 5G:6)',
+         },
+         age: {
+            type: DataTypes.ENUM('18', '20', '65'),
+            allowNull: false,
+            comment: '연령(성인:20, 청소년:18, 실버:65)',
          },
          basePrice: {
             type: DataTypes.INTEGER,
@@ -88,10 +82,11 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             comment: '최종 요금',
          },
-         message: {
-            type: DataTypes.STRING(100),
+         dis: {
+            type: DataTypes.ENUM('0', '12', '24'),
             allowNull: false,
-            comment: '문자 제공량',
+            defaultValue: '0',
+            comment: '약정기간 (무약정:0, 12개월:12, 24개월:24)',
          },
          description: {
             type: DataTypes.TEXT,
@@ -103,10 +98,24 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: true,
             comment: '부가 혜택',
          },
+         status: {
+            type: DataTypes.ENUM('active', 'inactive'),
+            allowNull: false,
+            defaultValue: 'active',
+            comment: '요금제 상태',
+         },
       },
       {
          timestamps: true,
          tableName: 'plans',
+         indexes: [
+            {
+               fields: ['agencyId'],
+            },
+            {
+               fields: ['type', 'status'],
+            },
+         ],
       }
    )
 

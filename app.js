@@ -25,8 +25,23 @@ const { createOrUpdateUser, generateJWT } = require('./utils/auth')
 dotenv.config()
 const app = express()
 
+// CORS 설정
+app.use(
+   cors({
+      origin: process.env.FRONTEND_URL,
+      credentials: true,
+   })
+)
+
+// 기본 미들웨어 설정
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
 // Passport 설정
 passportConfig()
+
+// API 라우트
+app.use('/admin', adminRoutes)
 
 // Middleware
 app.use(helmet())

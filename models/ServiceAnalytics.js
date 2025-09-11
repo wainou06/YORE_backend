@@ -42,9 +42,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
          timestamps: true,
-      },
-      {
-         timestamps: true,
+         tableName: 'service_analytics',
          indexes: [
             {
                fields: ['serviceId', 'period'],
@@ -65,7 +63,6 @@ module.exports = (sequelize, DataTypes) => {
          foreignKey: 'serviceId',
          as: 'service',
       })
-
       ServiceAnalytics.belongsTo(models.Agency, {
          foreignKey: 'agencyId',
          as: 'agency',

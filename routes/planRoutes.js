@@ -9,6 +9,7 @@ router.get('/', planController.getAllPlans)
 router.get('/:id', planController.getPlan)
 
 // Agency routes (통신사 전용)
+router.get('/agency', isAuthenticated, isAgency, planController.getAgencyPlans)
 router.post(
    '/',
    isAuthenticated,

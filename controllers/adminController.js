@@ -41,7 +41,8 @@ exports.loginAdmin = async (req, res, next) => {
          throw new ApiError(401, '비밀번호가 틀렸습니다.')
       }
 
-      const token = jwt.sign({ id: admin.id, email: admin.email }, process.env.JWT_SECRET, { expiresIn: '1h' })
+      const { generateJWT } = require('../utils/auth')
+      const token = generateJWT(admin)
 
       const resAdmin = { id: admin.id, name: admin.name, email: admin.email }
 
@@ -50,6 +51,7 @@ exports.loginAdmin = async (req, res, next) => {
       next(error)
    }
 }
+
 // 사용자 목록 조회
 exports.getAllUsers = async (req, res, next) => {
    try {

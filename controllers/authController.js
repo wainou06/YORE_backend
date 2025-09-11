@@ -1,6 +1,4 @@
-const authService = require('../services/authService')
-const logger = require('../utils/logger')
-
+const jwt = require('jsonwebtoken')
 const { User, Agency } = require('../models')
 
 exports.register = async (req, res) => {
@@ -44,7 +42,7 @@ exports.register = async (req, res) => {
          })
       }
 
-      res.status(201).json({ success: true, message: '회원가입 성공', user: newUser })
+      res.status(201).json({ success: true, message: '회원가입 성공', user: newUser.get({ plain: true }) })
    } catch (error) {
       console.error(error)
       res.status(500).json({ success: false, message: '서버 오류' })
@@ -54,6 +52,10 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
    try {
       const { email, password, userType } = req.body
+      // 비밀번호가 없거나 빈 문자열이면 로그인 실패
+      if (!password || password.trim() === '') {
+         return res.status(400).json({ message: '비밀번호를 입력하세요.' })
+      }
 
       const user = await User.findOne({
          where: { email },
@@ -87,7 +89,17 @@ exports.login = async (req, res) => {
          return res.json({ success: false, message: '기업 정보를 찾을 수 없습니다.' })
       }
 
-      res.json({ success: true, message: '로그인 성공', user })
+      // === JWT 토큰 발급 ===
+      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+
+      const plainUser = user.get({ plain: true })
+      delete plainUser.password
+      res.json({
+         success: true,
+         message: '로그인 성공',
+         token,
+         user: plainUser,
+      })
    } catch (error) {
       console.error(error)
       res.status(500).json({ success: false, message: '서버 오류' })
@@ -98,6 +110,7 @@ exports.getProfile = async (req, res) => {
    try {
       const user = await User.findOne({
          where: { id: req.user.id },
+         attributes: ['id', 'email', 'name', 'userid', 'phone', 'access', 'createdAt', 'updatedAt'],
          include:
             req.user.access === 'agency'
                ? [
@@ -114,7 +127,93 @@ exports.getProfile = async (req, res) => {
          return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
       }
 
-      res.json({ success: true, user })
+      const plainUser = user.get({ plain: true })
+      delete plainUser.password
+      res.json({ success: true, user: plainUser })
+   } catch (error) {
+      console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+exports.logout = (req, res) => {
+   try {
+      // JWT를 사용하는 경우 클라이언트에서 토큰을 삭제하도록 안내
+      res.json({ success: true, message: '로그아웃 되었습니다.' })
+   } catch (error) {
+      console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+exports.updateProfile = async (req, res) => {
+   try {
+      const { name, phone } = req.body
+      const user = await User.findByPk(req.user.id)
+
+      if (!user) {
+         return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
+      }
+
+      await user.update({
+         name: name || user.name,
+         phone: phone || user.phone,
+      })
+
+      const plainUser = user.get({ plain: true })
+      delete plainUser.password
+      res.json({ success: true, message: '프로필이 수정되었습니다.', user: plainUser })
+   } catch (error) {
+      console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+exports.updateAgencyProfile = async (req, res) => {
+   try {
+      if (req.user.access !== 'agency') {
+         return res.status(403).json({ success: false, message: '기업 회원만 접근할 수 있습니다.' })
+      }
+
+      const { agencyName, managerName } = req.body
+      const agency = await Agency.findOne({ where: { userId: req.user.id } })
+
+      if (!agency) {
+         return res.status(404).json({ success: false, message: '기업 정보를 찾을 수 없습니다.' })
+      }
+
+      await agency.update({
+         agencyName: agencyName || agency.agencyName,
+         managerName: managerName || agency.managerName,
+      })
+
+      res.json({ success: true, message: '기업 정보가 수정되었습니다.', agency })
+   } catch (error) {
+      console.error(error)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+exports.changePassword = async (req, res) => {
+   try {
+      const { currentPassword, newPassword } = req.body
+      const user = await User.findByPk(req.user.id)
+
+      if (!user) {
+         return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
+      }
+
+      // 현재 비밀번호 확인
+      const isMatch = await user.validatePassword(currentPassword)
+      if (!isMatch) {
+         return res.status(400).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' })
+      }
+
+      // 새 비밀번호로 업데이트
+      user.password = newPassword
+      await user.save()
+
+      res.json({ success: true, message: '비밀번호가 변경되었습니다.' })
    } catch (error) {
       console.error(error)
       res.status(500).json({ success: false, message: '서버 오류' })

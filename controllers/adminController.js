@@ -1,6 +1,7 @@
 const { User, Agency, Plans, Surveys, AdditionalServices } = require('../models')
 const { Admin } = require('../models')
 const ApiError = require('../utils/apiError')
+const jwt = require('jsonwebtoken')
 
 //관리자 생성
 exports.registerAdmin = async (req, res, next) => {
@@ -43,7 +44,9 @@ exports.loginAdmin = async (req, res, next) => {
       const { generateJWT } = require('../utils/auth')
       const token = generateJWT(admin)
 
-      res.status(200).json({ success: true, message: '관리자 로그인 성공', token, admin })
+      const resAdmin = { id: admin.id, name: admin.name, email: admin.email }
+
+      res.status(200).json({ success: true, message: '관리자 로그인 성공', token, admin: resAdmin })
    } catch (error) {
       next(error)
    }

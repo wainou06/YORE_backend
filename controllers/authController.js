@@ -219,3 +219,37 @@ exports.changePassword = async (req, res) => {
       res.status(500).json({ success: false, message: '서버 오류' })
    }
 }
+
+// 이메일 변경
+exports.changeEmail = async (req, res) => {
+   try {
+      const { newEmail } = req.body
+
+      const exists = await User.findOne({ where: { email: newEmail } })
+      if (exists) return res.status(400).json({ success: false, message: '이미 존재하는 이메일입니다.' })
+
+      const user = await User.findByPk(req.user.id)
+      user.email = newEmail
+      await user.save()
+
+      res.json({ success: true, message: '이메일 변경 완료' })
+   } catch (err) {
+      console.error(err)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}
+
+// 생일 변경
+exports.changeBirth = async (req, res) => {
+   try {
+      const { birth } = req.body
+      const user = await User.findByPk(req.user.id)
+      user.birth = birth
+      await user.save()
+
+      res.json({ success: true, message: '생일이 업데이트되었습니다.' })
+   } catch (err) {
+      console.error(err)
+      res.status(500).json({ success: false, message: '서버 오류' })
+   }
+}

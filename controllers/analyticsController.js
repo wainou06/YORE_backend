@@ -1,15 +1,87 @@
 const { ServiceAnalytics, AdditionalServices, Agency } = require('../models')
-const User = require('../models/User')
+const { User, Transactions, Plans, UserPlan } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
+const { nowDateMinus } = require('../utils/dateSet')
 
-exports.getTotalUsers = async (req, res, next) => {
+exports.getHomeStatus = async (req, res, next) => {
    try {
+      const sevnDaysAgo = nowDateMinus(7)
+
       const totalUsers = await User.count()
+      const totalRevenue = await Transactions.sum('amount', {
+         where: {
+            status: 'success',
+         },
+      })
+      const newUsers = await User.count({
+         where: {
+            createdAt: {
+               [Op.gte]: sevnDaysAgo,
+            },
+         },
+      })
+      const transactionsCount = await Transactions.count()
+      const averageOrder = totalRevenue / transactionsCount
+      const recentOrdersData = await Transactions.findAll({
+         order: [['date', 'DESC']],
+         limit: 8,
+         attributes: ['amount', 'status', 'date'],
+         include: [
+            {
+               model: User,
+               as: 'user',
+               attributes: ['name'],
+            },
+            {
+               model: UserPlan,
+               as: 'userPlan',
+               attributes: [],
+               include: {
+                  model: Plans,
+                  as: 'plan',
+                  attributes: ['name'],
+               },
+            },
+         ],
+      })
+      const recentOrders = recentOrdersData.map((transaction) => ({
+         userName: transaction.user.name,
+         planName: transaction.plan.name,
+         totalAmount: transaction.amount,
+         status: transaction.status,
+         date: transaction.date,
+      }))
+
+      const data = {
+         totalUsers: totalUsers || 0,
+         totalRevenue: totalRevenue || 0,
+         newUsers: newUsers || 0,
+         averageOrder: averageOrder || 0,
+         recentOrders: recentOrders || null,
+      }
 
       res.status(200).json({
          success: true,
-         total: totalUsers,
+         data,
+         message: '총 사용자 수를 성공적으로 가져왔습니다.',
+      })
+   } catch (error) {
+      next(error)
+   }
+}
+
+exports.getUserStatus = async (req, res, next) => {
+   try {
+      const userList = await User.findAll()
+
+      const data = {
+         userList,
+      }
+
+      res.status(200).json({
+         success: true,
+         data,
          message: '총 사용자 수를 성공적으로 가져왔습니다.',
       })
    } catch (error) {

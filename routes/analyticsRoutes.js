@@ -4,7 +4,11 @@ const { isAuthenticated, isAdmin, isAgency } = require('../middlewares/authMiddl
 
 const router = express.Router()
 
-router.get('/getTotalUsers', analyticsController.getTotalUsers)
+router.use(isAuthenticated)
+router.use(isAdmin)
+
+router.get('/getHomeStatus', analyticsController.getHomeStatus)
+router.get('/getUserStatus', analyticsController.getUserStatus)
 
 // 전체 통계 조회 (관리자 및 통신사)
 router.get('/', isAuthenticated, analyticsController.getServiceStats)

@@ -40,9 +40,6 @@ app.use(express.urlencoded({ extended: true }))
 // Passport 설정
 passportConfig()
 
-// API 라우트
-app.use('/admin', adminRoutes)
-
 // Middleware
 app.use(helmet())
 
@@ -150,15 +147,15 @@ authRoutes.get('/kakao/callback', async (req, res) => {
 })
 
 // Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/surveys', surveyRoutes)
-app.use('/api/plans', planRoutes)
-app.use('/api/services', serviceRoutes)
-app.use('/api/analytics', analyticsRoutes)
-app.use('/api/notifications', notificationRoutes)
-app.use('/api/user-plans', userPlanRoutes)
-app.use('/api/transactions', transactionRoutes)
-app.use('/api/admin', adminRoutes)
+app.use('/auth', authRoutes)
+app.use('/surveys', surveyRoutes)
+app.use('/plans', planRoutes)
+app.use('/services', serviceRoutes)
+app.use('/analytics', analyticsRoutes)
+app.use('/notifications', notificationRoutes)
+app.use('/user-plans', userPlanRoutes)
+app.use('/transactions', transactionRoutes)
+app.use('/admin', adminRoutes)
 
 // Error handling
 app.use(errorMiddleware)

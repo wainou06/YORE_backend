@@ -1,7 +1,6 @@
 const { User, Agency, Plans, Surveys, AdditionalServices } = require('../models')
 const { Admin } = require('../models')
 const ApiError = require('../utils/apiError')
-const jwt = require('jsonwebtoken')
 
 //관리자 생성
 exports.registerAdmin = async (req, res, next) => {

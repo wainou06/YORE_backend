@@ -42,6 +42,7 @@ exports.isAuthenticated = async (req, res, next) => {
          })
       }
       req.user = user
+      console.log('[isAuthenticated] req.user:', req.user && req.user.toJSON ? req.user.toJSON() : req.user)
       return next()
    } catch (error) {
       if (error.name === 'TokenExpiredError') {
@@ -72,6 +73,7 @@ exports.isAdmin = (req, res, next) => {
 exports.isAgency = async (req, res, next) => {
    try {
       if (!req.user || req.user.access !== 'agency') {
+         console.log('[isAgency] req.user:', req.user)
          return res.status(403).json({
             success: false,
             message: '통신사만 접근할 수 있습니다.',
@@ -81,14 +83,19 @@ exports.isAgency = async (req, res, next) => {
       // 통신사 정보 확인
       const agency = await Agency.findOne({ where: { userId: req.user.id } })
       if (!agency) {
+         console.log('[isAgency] Agency not found for userId:', req.user.id)
          return res.status(403).json({
             success: false,
             message: '등록된 통신사 정보가 없습니다.',
          })
       }
 
+      console.log('[isAgency] req.agency:', agency && agency.toJSON ? agency.toJSON() : agency)
+
       // 통신사 정보를 req 객체에 추가
       req.agency = agency
+      req._agency = agency // multer 등 미들웨어로 인한 소실 방지
+
       next()
    } catch (error) {
       return res.status(500).json({

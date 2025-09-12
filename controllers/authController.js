@@ -116,6 +116,55 @@ exports.login = (req, res, next) => {
    })(req, res, next)
 }
 
+// 카카오 컨트롤러
+const { createOrUpdateUser, generateJWT } = require('../utils/auth')
+exports.kakaoCallback = async (req, res) => {
+   const code = req.query.code
+   if (!code) return res.status(400).send('인가 코드 없음')
+
+   try {
+      // 1. 카카오 토큰 발급
+      const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+         body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: process.env.KAKAO_CLIENT_ID,
+            redirect_uri: process.env.KAKAO_REDIRECT_URI,
+            code,
+         }),
+      })
+
+      const tokenData = await tokenResponse.json()
+      const accessToken = tokenData.access_token
+
+      // 2. 카카오 사용자 정보 요청
+      const userResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
+         method: 'GET',
+         headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      const kakaoUser = await userResponse.json()
+
+      const tempEmail = kakaoUser.id + '@kakao.com'
+      const name = kakaoUser.kakao_account.profile.nickname
+
+      // 3. DB 처리
+      const user = await createOrUpdateUser({
+         userid: `kakao_${kakaoUser.id}`,
+         email: tempEmail,
+         name,
+      })
+
+      // 4. JWT 발급 후 프론트로 redirect
+      const token = generateJWT(user)
+      res.redirect(`${process.env.FRONTEND_URL}/auth/kakao/callback?token=${token}&name=${encodeURIComponent(name)}`)
+   } catch (error) {
+      console.error(error)
+      res.redirect(`${process.env.FRONTEND_URL}/auth/kakao/fail`)
+   }
+}
+
 exports.getProfile = async (req, res) => {
    try {
       const user = await User.findOne({

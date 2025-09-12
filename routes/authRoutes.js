@@ -7,6 +7,7 @@ const authController = require('../controllers/authController')
 const { isAuthenticated } = require('../middlewares/authMiddleware')
 const { validate } = require('../middlewares/validateMiddleware')
 const refreshController = require('../controllers/refreshController')
+
 // 토큰 리프레시
 router.post('/refresh', refreshController.refresh)
 
@@ -52,7 +53,10 @@ router.put('/profile/agency', isAuthenticated, validate(updateAgencyValidation),
 router.put('/profile/password', isAuthenticated, validate(changePasswordValidation), authController.changePassword)
 
 router.post('/change-password', isAuthenticated, authController.changePassword)
-// router.post('/change-email', isAuthenticated, authController.changeEmail)
-// router.post('/change-birth', isAuthenticated, authController.changeBirth)
+router.post('/change-email', isAuthenticated, authController.changeEmail)
+router.post('/change-birth', isAuthenticated, authController.changeBirth)
+
+// 카카오 가능 라우트 추가
+router.get('/kakao/callback', authController.kakaoCallback)
 
 module.exports = router

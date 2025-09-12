@@ -63,7 +63,7 @@ module.exports = (sequelize, DataTypes) => {
          foreignKey: 'planId',
          as: 'plan',
       })
-      UserPlan.hasMany(models.Transactions, {
+      UserPlan.hasOne(models.Transactions, {
          foreignKey: 'userPlanId',
          as: 'transactions',
       })

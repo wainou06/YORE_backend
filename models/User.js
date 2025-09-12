@@ -49,6 +49,15 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.DATEONLY,
             allowNull: true,
          },
+         adminId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+               model: 'admins',
+               key: 'id',
+            },
+            comment: '관리자 ID(FK)',
+         },
       },
       {
          timestamps: true,
@@ -71,6 +80,10 @@ module.exports = (sequelize, DataTypes) => {
    )
 
    User.associate = (models) => {
+      User.belongsTo(models.Admin, {
+         foreignKey: 'adminId',
+         as: 'admin',
+      })
       User.hasOne(models.Agency, {
          foreignKey: 'userId',
          as: 'agency',

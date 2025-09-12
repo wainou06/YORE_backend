@@ -90,6 +90,18 @@ app.use(
    })
 )
 
+// CSP 설정
+app.use(
+   helmet({
+      contentSecurityPolicy: {
+         directives: {
+            defaultSrc: ["'self'"],
+            connectSrc: ["'self'", 'http://localhost:8000'],
+         },
+      },
+   })
+)
+
 app.use(passport.initialize())
 app.use(passport.session())
 

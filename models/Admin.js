@@ -46,6 +46,13 @@ module.exports = (sequelize, DataTypes) => {
       }
    )
 
+   Admin.associate = (models) => {
+      Admin.hasMany(models.User, {
+         foreignKey: 'adminId',
+         as: 'users',
+      })
+   }
+
    Admin.prototype.validatePassword = async function (password) {
       return await bcrypt.compare(password, this.password)
    }

@@ -31,6 +31,7 @@ module.exports = (sequelize, DataTypes) => {
          userPlanId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            unique: true, // 1:1 관계 보장
             references: {
                model: 'user_plans',
                key: 'id',
@@ -48,6 +49,23 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING(100),
             unique: true,
             comment: '외부 결제 시스템 트랜잭션 ID',
+         },
+         // 할부 관련 필드
+         isInstallment: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            comment: '할부 여부',
+         },
+         installmentMonths: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            comment: '할부 개월 수',
+         },
+         installmentAmount: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            comment: '할부 1회 결제 금액',
          },
       },
       {

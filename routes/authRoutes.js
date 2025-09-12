@@ -52,7 +52,7 @@ router.put('/profile/agency', isAuthenticated, validate(updateAgencyValidation),
 router.put('/profile/password', isAuthenticated, validate(changePasswordValidation), authController.changePassword)
 
 router.post('/change-password', isAuthenticated, authController.changePassword)
-router.post('/change-email', isAuthenticated, authController.changeEmail)
-router.post('/change-birth', isAuthenticated, authController.changeBirth)
+// router.post('/change-email', isAuthenticated, authController.changeEmail)
+// router.post('/change-birth', isAuthenticated, authController.changeBirth)
 
 module.exports = router

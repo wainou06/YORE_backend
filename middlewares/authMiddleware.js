@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const { User, Agency } = require('../models')
+const { User, Agency, Admin } = require('../models')
 
 // 기본 인증 미들웨어 (사용자/관리자 토큰 분리)
 exports.isAuthenticated = async (req, res, next) => {
@@ -18,7 +18,6 @@ exports.isAuthenticated = async (req, res, next) => {
       if (token.startsWith('admin_')) {
          const realToken = token.replace('admin_', '')
          const decoded = jwt.verify(realToken, process.env.JWT_SECRET)
-         const { Admin } = require('../models')
          const admin = await Admin.findOne({ where: { id: decoded.id } })
          if (!admin) {
             return res.status(401).json({
@@ -43,7 +42,7 @@ exports.isAuthenticated = async (req, res, next) => {
          })
       }
       req.user = user
-      next()
+      return next()
    } catch (error) {
       if (error.name === 'TokenExpiredError') {
          return res.status(401).json({
@@ -60,7 +59,7 @@ exports.isAuthenticated = async (req, res, next) => {
 
 // 관리자 권한 확인
 exports.isAdmin = (req, res, next) => {
-   if (!req.user || req.user.access !== 'admin') {
+   if (!req.admin) {
       return res.status(403).json({
          success: false,
          message: '관리자만 접근할 수 있습니다.',

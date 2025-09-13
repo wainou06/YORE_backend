@@ -20,7 +20,7 @@ async function startServer() {
 
       // Sync database in development mode
       if (process.env.NODE_ENV === 'development') {
-         await sequelize.sync({ alter: true })
+         await sequelize.sync({ force: false })
          logger.info('Database synchronized')
       }
 

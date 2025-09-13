@@ -2,11 +2,11 @@ const { ServiceAnalytics, AdditionalServices, Agency } = require('../models')
 const { User, Transactions, Plans, UserPlan } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
-const { nowDateMinus } = require('../utils/dateSet')
+const { nowDateMinus, yearMonthDay } = require('../utils/dateSet')
 
 exports.getHomeStatus = async (req, res, next) => {
    try {
-      const sevnDaysAgo = nowDateMinus(7)
+      const sevnDaysAgo = nowDateMinus(1)
 
       const totalUsers = await User.count()
       const totalRevenue = await Transactions.sum('amount', {
@@ -64,7 +64,7 @@ exports.getHomeStatus = async (req, res, next) => {
       res.status(200).json({
          success: true,
          data,
-         message: '총 사용자 수를 성공적으로 가져왔습니다.',
+         message: '데이터를 가져왔어요',
       })
    } catch (error) {
       next(error)
@@ -73,16 +73,98 @@ exports.getHomeStatus = async (req, res, next) => {
 
 exports.getUserStatus = async (req, res, next) => {
    try {
-      const userList = await User.findAll()
+      const page = req.query.page || 1
+      const offset = (page - 1) * 10
 
-      const data = {
-         userList,
-      }
+      const { count: totalCount, rows: users } = await User.findAndCountAll({
+         limit: 10,
+         offset: offset,
+         order: [['createdAt', 'DESC']],
+      })
+
+      const totalPages = Math.ceil(totalCount / 10)
+
+      const userPromises = users.map(async (user) => {
+         const createdAt = yearMonthDay(user.createdAt)
+         const orderCount = await Transactions.count({
+            where: {
+               userId: user.id,
+               status: 'success',
+            },
+         })
+         return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            createdAt,
+            orderCount: orderCount || 0,
+            status: 'active',
+         }
+      })
+
+      const data = await Promise.all(userPromises)
 
       res.status(200).json({
          success: true,
          data,
-         message: '총 사용자 수를 성공적으로 가져왔습니다.',
+         totalPages,
+         message: '데이터를 가져왔어요',
+      })
+   } catch (error) {
+      next(error)
+   }
+}
+
+exports.getPlansStatus = async (req, res, next) => {
+   try {
+      const page = req.query.page || 1
+      const offset = (page - 1) * 8
+
+      const { count: totalCount, rows: plans } = await Plans.findAndCountAll({
+         limit: 8,
+         offset: offset,
+         order: [['createdAt', 'DESC']],
+      })
+
+      const totalPages = Math.ceil(totalCount / 10)
+
+      const planPromises = plans.map(async (plan) => {
+         const createdAt = yearMonthDay(plan.createdAt)
+         let carrier = 'null'
+         switch (plan.type) {
+            case '2':
+               carrier = '3G'
+               break
+            case '3':
+               carrier = 'LTE'
+               break
+            case '6':
+               carrier = '5G'
+               break
+         }
+         return {
+            id: plan.id,
+            name: plan.name,
+            carrier,
+            data: plan.data,
+            voice: plan.voice,
+            sms: plan.sms,
+            price: plan.basePrice,
+            discountRate: plan.discountAmount,
+            status: plan.status,
+            features: plan.description,
+            createdAt,
+         }
+      })
+
+      const data = await Promise.all(planPromises)
+
+      res.status(200).json({
+         success: true,
+         data,
+         totalPages,
+         message: '데이터를 가져왔어요',
       })
    } catch (error) {
       next(error)

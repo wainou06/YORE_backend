@@ -17,4 +17,7 @@ router.post(
    planController.createPlan
 )
 
+// 요금제 목록 조회 (권한별 분기)
+router.get('/', isAuthenticated, planController.getPlans)
+
 module.exports = router

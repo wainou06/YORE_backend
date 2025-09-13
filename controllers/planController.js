@@ -79,3 +79,31 @@ exports.createPlan = async (req, res, next) => {
       next(error)
    }
 }
+
+exports.getPlans = async (req, res, next) => {
+   console.log('[getPlans] called, user:', req.user ? (req.user.toJSON ? req.user.toJSON() : req.user) : null, 'admin:', req.admin ? (req.admin.toJSON ? req.admin.toJSON() : req.admin) : null)
+   try {
+      let plans
+      const includeAgency = [{ model: Agency, as: 'agency', attributes: ['agencyName'] }]
+      if (req.admin) {
+         // 관리자: 전체
+         plans = await Plans.findAll({ include: includeAgency })
+      } else if (req.user?.access === 'agency') {
+         // 통신사: 본인 소속만
+         const agency = await Agency.findOne({ where: { userId: req.user.id } })
+         if (!agency) {
+            return res.status(403).json({ message: '소속 통신사 정보가 없습니다.' })
+         }
+         plans = await Plans.findAll({ where: { agencyId: agency.id }, include: includeAgency })
+         console.log('[getPlans][agency] agency:', agency && agency.toJSON ? agency.toJSON() : agency)
+         console.log('[getPlans][agency] plans:', Array.isArray(plans) ? plans.map((p) => (p.toJSON ? p.toJSON() : p)) : plans)
+      } else {
+         // 일반 사용자/비로그인: 공개(active)만
+         plans = await Plans.findAll({ where: { status: 'active' }, include: includeAgency })
+      }
+      res.json(plans)
+   } catch (err) {
+      console.error('[getPlans][catch] error:', err)
+      next(err)
+   }
+}

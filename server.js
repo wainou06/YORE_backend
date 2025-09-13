@@ -19,10 +19,10 @@ async function startServer() {
       logger.info('Database connection has been established successfully.')
 
       // Sync database in development mode
-      // if (process.env.NODE_ENV === 'development') {
-      //    await sequelize.sync({ alter: true })
-      //    logger.info('Database synchronized')
-      // }
+      if (process.env.NODE_ENV === 'development') {
+         await sequelize.sync({ alter: true })
+         logger.info('Database synchronized')
+      }
 
       app.listen(PORT, () => {
          logger.info(`Server is running on port ${PORT}`)

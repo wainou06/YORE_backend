@@ -1,3 +1,7 @@
+// Swagger UI
+const swaggerUi = require('swagger-ui-express')
+const swaggerSpec = require('./utils/swagger')
+
 const axios = require('axios')
 const express = require('express')
 const cors = require('cors')
@@ -97,7 +101,7 @@ app.use(
       contentSecurityPolicy: {
          directives: {
             defaultSrc: ["'self'"],
-            connectSrc: ["'self'", 'http://localhost:8000'],
+            connectSrc: ["'self'", `${process.env.APP_API_URL}`],
          },
       },
    })
@@ -158,6 +162,9 @@ authRoutes.get('/kakao/callback', async (req, res) => {
       res.redirect(`${process.env.FRONTEND_URL}/auth/kakao/fail`)
    }
 })
+
+// Swagger 문서 라우트
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 // Routes
 app.use('/auth', authRoutes)

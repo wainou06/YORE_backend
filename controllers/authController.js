@@ -105,8 +105,8 @@ exports.login = (req, res, next) => {
          }
       }
 
-      // JWT 토큰 발급
-      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+      // JWT 토큰 발급 (access 필드 포함)
+      const token = jwt.sign({ id: user.id, access: user.access }, process.env.JWT_SECRET, { expiresIn: '1h' })
       res.json({
          success: true,
          message: '로그인 성공',

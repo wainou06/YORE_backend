@@ -18,6 +18,7 @@ const notificationRoutes = require('./routes/notificationRoutes')
 const userPlanRoutes = require('./routes/userPlanRoutes')
 const transactionRoutes = require('./routes/transactionRoutes')
 const adminRoutes = require('./routes/adminRoutes')
+const agencyRoutes = require('./routes/agencyRoutes')
 const errorMiddleware = require('./middlewares/errorMiddleware')
 
 const { createOrUpdateUser, generateJWT } = require('./utils/auth')
@@ -160,6 +161,7 @@ authRoutes.get('/kakao/callback', async (req, res) => {
 
 // Routes
 app.use('/auth', authRoutes)
+app.use('/agencies', agencyRoutes)
 app.use('/surveys', surveyRoutes)
 app.use('/plans', planRoutes)
 app.use('/services', serviceRoutes)

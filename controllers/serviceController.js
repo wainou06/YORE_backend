@@ -5,7 +5,7 @@ const ApiError = require('../utils/apiError')
 exports.createService = async (req, res, next) => {
    try {
       const serviceData = req.body
-      
+
       // 모델 필수 필드: name, provider, planId, fee
       if (!serviceData.name || !serviceData.provider || !serviceData.planId || serviceData.fee === undefined) {
          throw new ApiError(400, '서비스 이름, 제공자, 요금제, 요금은 필수입니다.')

@@ -42,6 +42,19 @@ exports.createUserPlan = async (req, res, next) => {
          status: 'pending',
          startDate: new Date(),
       })
+
+      // 요금제의 agencyId로 알림 생성
+      const { Notifications } = require('../models')
+      if (plan.agencyId) {
+         await Notifications.create({
+            title: '새 요금제 가입 신청',
+            message: `${plan.name} 요금제에 가입 신청이 들어왔습니다.`,
+            type: 'NEW_SERVICE',
+            targetUserType: 'AGENCY',
+            agencyId: plan.agencyId,
+         })
+      }
+
       res.status(201).json({ status: 'success', data: userPlan })
    } catch (error) {
       next(error)

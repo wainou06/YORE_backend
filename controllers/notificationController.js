@@ -1,243 +1,111 @@
-const { Notification, Agency, AdditionalServices } = require('../models')
-const ApiError = require('../utils/apiError')
-const { Op } = require('sequelize')
+const { Notifications, User, Agency } = require('../models')
 
-/**
- * 알림 목록 조회
- */
-exports.getNotifications = async (req, res, next) => {
+// 알림 생성 (관리자/통신사만)
+exports.createNotification = async (req, res) => {
    try {
-      const { page = 1, limit = 10 } = req.query
-      const offset = (page - 1) * limit
-
-      const where = {}
-      // 일반 사용자는 자신의 알림만 조회
-      if (!req.user.isAdmin) {
-         where.userId = req.user.id
+      const { title, message, type, targetUserType, userId, agencyId } = req.body
+      // 권한 체크: 관리자 또는 통신사만 생성 가능
+      if (!['admin', 'agency'].includes(req.user.access)) {
+         return res.status(403).json({ message: '권한이 없습니다.' })
       }
-
-      const { count, rows: notifications } = await Notification.findAndCountAll({
-         where,
-         include: [
-            {
-               model: Agency,
-               as: 'agency',
-               attributes: ['id', 'agencyName'],
-            },
-         ],
-         order: [['createdAt', 'DESC']],
-         offset,
-         limit: parseInt(limit),
-      })
-
-      res.status(200).json({
-         status: 'success',
-         data: {
-            notifications,
-            pagination: {
-               total: count,
-               currentPage: parseInt(page),
-               totalPages: Math.ceil(count / limit),
-            },
-         },
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 읽지 않은 알림 개수 조회
- */
-exports.getUnreadCount = async (req, res, next) => {
-   try {
-      const count = await Notification.count({
-         where: {
-            userId: req.user.id,
-            isRead: false,
-         },
-      })
-
-      res.status(200).json({
-         status: 'success',
-         data: { count },
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 단일 알림 읽음 처리
- */
-exports.markAsRead = async (req, res, next) => {
-   try {
-      const { id } = req.params
-      const notification = await Notification.findByPk(id)
-
-      if (!notification) {
-         throw new ApiError(404, '알림을 찾을 수 없습니다.')
-      }
-
-      if (notification.userId !== req.user.id && !req.user.isAdmin) {
-         throw new ApiError(403, '접근 권한이 없습니다.')
-      }
-
-      await notification.update({ isRead: true })
-
-      res.status(200).json({
-         status: 'success',
-         data: notification,
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 모든 알림 읽음 처리
- */
-exports.markAllAsRead = async (req, res, next) => {
-   try {
-      await Notification.update(
-         { isRead: true },
-         {
-            where: {
-               userId: req.user.id,
-               isRead: false,
-            },
-         }
-      )
-
-      res.status(200).json({
-         status: 'success',
-         message: '모든 알림이 읽음 처리되었습니다.',
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 단일 알림 생성
- * 관리자: 모든 유형의 알림 생성 가능
- * 통신사: 자신의 서비스에 대한 알림만 생성 가능
- */
-exports.createNotification = async (req, res, next) => {
-   try {
-      const { title, message, type, targetUserType, agencyId, serviceId } = req.body
-
-      // 입력값 검증
+      // 필수값 체크
       if (!title || !message || !type || !targetUserType) {
-         throw new ApiError(400, '필수 입력값이 누락되었습니다.')
+         return res.status(400).json({ message: '필수값 누락' })
       }
-
-      // 권한 검증
-      if (!req.user?.isAdmin) {
-         // 전체 알림은 관리자만 생성 가능
-         if (targetUserType === 'ALL') {
-            throw new ApiError(403, '전체 알림 생성 권한이 없습니다.')
-         }
-
-         // 통신사는 자신의 서비스에 대한 알림만 생성 가능
-         if (agencyId && agencyId !== req.user.agencyId) {
-            throw new ApiError(403, '다른 통신사의 알림을 생성할 수 없습니다.')
-         }
-      }
-
-      const notification = await Notification.create({
+      // 알림 생성
+      const notification = await Notifications.create({
          title,
          message,
          type,
          targetUserType,
-         agencyId: agencyId || req.user?.agencyId,
-         serviceId,
-         isRead: false,
+         userId: userId || null,
+         agencyId: agencyId || null,
       })
-
-      const result = await Notification.findByPk(notification.id, {
-         include: [
-            {
-               model: Agency,
-               as: 'agency',
-               attributes: ['id', 'name'],
-            },
-            {
-               model: AdditionalServices,
-               as: 'service',
-               attributes: ['id', 'name'],
-            },
-         ],
-      })
-
-      res.status(201).json({
-         status: 'success',
-         data: result,
-      })
-   } catch (error) {
-      next(error)
+      res.status(201).json(notification)
+   } catch (err) {
+      res.status(500).json({ message: err.message })
    }
 }
 
-/**
- * 일괄 알림 생성 (관리자 전용)
- * 여러 개의 알림을 한 번에 생성
- */
-exports.createBulkNotifications = async (req, res, next) => {
+// 알림 목록 조회 (userId 또는 agencyId)
+exports.getNotifications = async (req, res) => {
    try {
-      const { notifications } = req.body
-
-      // 관리자 권한 검증
-      if (!req.user?.isAdmin) {
-         throw new ApiError(403, '일괄 알림 생성 권한이 없습니다.')
-      }
-
-      // 입력값 검증
-      if (!Array.isArray(notifications) || notifications.length === 0) {
-         throw new ApiError(400, '유효한 알림 목록이 필요합니다.')
-      }
-
-      // 각 알림의 필수 필드 검증
-      notifications.forEach((notification, index) => {
-         const { title, message, type, targetUserType } = notification
-         if (!title || !message || !type || !targetUserType) {
-            throw new ApiError(400, `${index + 1}번째 알림의 필수 입력값이 누락되었습니다.`)
+      const { user } = req
+      let where = {}
+      if (user.access === 'user') {
+         where.userId = user.id
+      } else if (user.access === 'agency') {
+         // 항상 Agency 모델에서 userId로 agencyId 조회
+         const agency = await Agency.findOne({ where: { userId: user.id } })
+         if (agency && agency.id) {
+            where.agencyId = agency.id
+         } else {
+            // 소속된 agency가 없으면 빈 배열 반환
+            return res.json([])
          }
-      })
-
-      const createdNotifications = await Notification.bulkCreate(
-         notifications.map((notification) => ({
-            ...notification,
-            isRead: false,
-            createdAt: new Date(),
-         }))
-      )
-
-      const result = await Notification.findAll({
-         where: {
-            id: {
-               [Op.in]: createdNotifications.map((n) => n.id),
-            },
-         },
+      } else if (user.access === 'admin') {
+         // 관리자는 전체 또는 targetUserType: 'ADMIN' 알림
+         where.targetUserType = 'ADMIN'
+      }
+      const notifications = await Notifications.findAll({
+         where,
+         order: [['createdAt', 'DESC']],
          include: [
-            {
-               model: Agency,
-               as: 'agency',
-               attributes: ['id', 'name'],
-            },
-            {
-               model: AdditionalServices,
-               as: 'service',
-               attributes: ['id', 'name'],
-            },
+            { model: User, as: 'user' },
+            { model: Agency, as: 'agency' },
          ],
       })
+      res.json(notifications)
+   } catch (err) {
+      console.error('[알림 목록 조회 오류]', err)
+      res.status(500).json({ message: err.message, stack: err.stack })
+   }
+}
 
-      res.status(201).json({
-         status: 'success',
-         data: result,
-      })
-   } catch (error) {
-      next(error)
+// 알림 읽음 처리 (본인만)
+exports.markAsRead = async (req, res) => {
+   try {
+      const { id } = req.params
+      const notification = await Notifications.findByPk(id)
+      if (!notification) return res.status(404).json({ message: '알림 없음' })
+      // 본인 알림만 읽음 처리
+      if (req.user.access === 'user' && notification.userId !== req.user.id) {
+         return res.status(403).json({ message: '권한 없음' })
+      }
+      notification.isRead = true
+      await notification.save()
+      res.json({ message: '읽음 처리 완료' })
+   } catch (err) {
+      res.status(500).json({ message: err.message })
+   }
+}
+
+// (선택) 알림 삭제
+exports.deleteNotification = async (req, res) => {
+   try {
+      const { id } = req.params
+      const notification = await Notifications.findByPk(id)
+      if (!notification) return res.status(404).json({ message: '알림 없음' })
+
+      const user = req.user
+      // 관리자: 전체 삭제 가능
+      if (user.access === 'admin') {
+         await notification.destroy()
+         return res.json({ message: '삭제 완료' })
+      }
+      // 통신사: 본인 소속 알림만 삭제 가능
+      if (user.access === 'agency' && notification.agencyId === user.agency?.id) {
+         await notification.destroy()
+         return res.json({ message: '삭제 완료' })
+      }
+      // 사용자: 본인 알림만 삭제 가능
+      if (user.access === 'user' && notification.userId === user.id) {
+         await notification.destroy()
+         return res.json({ message: '삭제 완료' })
+      }
+      // 그 외: 권한 없음
+      return res.status(403).json({ message: '권한 없음' })
+   } catch (err) {
+      res.status(500).json({ message: err.message })
    }
 }

@@ -37,6 +37,17 @@ exports.createTransaction = async (req, res, next) => {
       // UserPlan 상태 active로 변경 (개발 단계: 실제 결제 연동 시에만 활성화)
       if (process.env.NODE_ENV === 'production' || req.body.forceActivate) {
          await userPlan.update({ status: 'active' }, { transaction: t })
+
+         // 알림 자동 생성 (가입 승인)
+         const { Notifications, Plans } = require('../models')
+         const planInfo = await Plans.findByPk(userPlan.planId)
+         await Notifications.create({
+            title: '요금제 가입 승인',
+            message: `${planInfo.name} 요금제 가입이 승인되었습니다.`,
+            type: 'SERVICE_UPDATE',
+            targetUserType: 'USER',
+            userId: userPlan.userId,
+         })
       }
 
       await t.commit()

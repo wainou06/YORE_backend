@@ -99,7 +99,7 @@ module.exports = (sequelize, DataTypes) => {
             comment: '부가 혜택',
          },
          status: {
-            type: DataTypes.ENUM('active', 'inactive'),
+            type: DataTypes.ENUM('active', 'inactive', 'pending'),
             allowNull: false,
             defaultValue: 'active',
             comment: '요금제 상태',

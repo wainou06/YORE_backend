@@ -67,6 +67,7 @@ exports.createPlan = async (req, res, next) => {
       // (선택) 부가서비스 생성
       if (planData.services && Array.isArray(planData.services)) {
          for (const svc of planData.services) {
+            // provider, fee 모두 프론트에서 받아온 값만 사용, 없으면 생성하지 않음
             if (svc.name && svc.provider && svc.fee) {
                await AdditionalServices.create({
                   name: svc.name,

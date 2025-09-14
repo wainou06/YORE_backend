@@ -34,8 +34,8 @@ exports.createTransaction = async (req, res, next) => {
          { transaction: t }
       )
 
-      // UserPlan 상태 active로 변경 (개발 단계: 실제 결제 연동 시에만 활성화)
-      if (process.env.NODE_ENV === 'production' || req.body.forceActivate) {
+      // UserPlan 상태 active로 변경
+      if (process.env.NODE_ENV === 'development' || req.body.forceActivate) {
          await userPlan.update({ status: 'active' }, { transaction: t })
 
          // 알림 자동 생성 (가입 승인)

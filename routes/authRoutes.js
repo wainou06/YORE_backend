@@ -50,7 +50,6 @@ router.post('/logout', isAuthenticated, authController.logout)
 router.get('/profile', isAuthenticated, authController.getProfile)
 router.put('/profile', isAuthenticated, validate(updateProfileValidation), authController.updateProfile)
 router.put('/profile/agency', isAuthenticated, validate(updateAgencyValidation), authController.updateAgencyProfile)
-router.put('/profile/password', isAuthenticated, validate(changePasswordValidation), authController.changePassword)
 
 router.post('/change-password', isAuthenticated, authController.changePassword)
 router.post('/change-email', isAuthenticated, authController.changeEmail)

@@ -34,8 +34,8 @@ module.exports = (sequelize, DataTypes) => {
             comment: '월별 요금',
          },
          status: {
-            type: DataTypes.ENUM('active', 'expired', 'cancelled'),
-            defaultValue: 'active',
+            type: DataTypes.ENUM('pending', 'active', 'expired', 'cancelled'),
+            defaultValue: 'pending',
             allowNull: false,
          },
          startDate: {

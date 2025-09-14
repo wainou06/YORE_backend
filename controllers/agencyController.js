@@ -11,3 +11,13 @@ exports.getAgencyByUserId = async (req, res) => {
       res.status(500).json({ message: 'Server error', error: err.message })
    }
 }
+
+// GET /agencies (전체 통신사 목록)
+exports.getAllAgencies = async (req, res) => {
+   try {
+      const agencies = await Agency.findAll({ attributes: ['id', 'agencyName'] })
+      res.json(agencies)
+   } catch (err) {
+      res.status(500).json({ message: 'Server error', error: err.message })
+   }
+}

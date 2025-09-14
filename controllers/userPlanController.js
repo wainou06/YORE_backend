@@ -2,256 +2,61 @@ const { UserPlan, User, Plans, Transactions } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
 
-/**
- * 사용자 플랜 생성 (구독 시작)
- */
+// [POST] /user-plans - 사용자 요금제 생성 (status: pending, 약정 분할만 적용)
 exports.createUserPlan = async (req, res, next) => {
    try {
-      const { planId, startDate = new Date() } = req.body
-      const userId = req.user.id
-
-      // 입력값 검증
-      if (!planId) {
-         throw new ApiError(400, '필수 입력값이 누락되었습니다.')
+      const { userId, planId } = req.body
+      if (!userId || !planId) {
+         throw new ApiError(400, 'userId, planId는 필수입니다.')
       }
-
-      // 플랜 정보 확인
-      const plan = await Plans.findByPk(planId)
-      if (!plan) {
-         throw new ApiError(404, '플랜을 찾을 수 없습니다.')
-      }
-
-      // 이미 활성화된 플랜이 있는지 확인
-      const existingPlan = await UserPlan.findOne({
+      // 중복 가입/대기 방지: 이미 pending 또는 active 상태의 UserPlan이 있으면 에러
+      const existing = await UserPlan.findOne({
          where: {
             userId,
-            status: 'active',
+            planId,
+            status: { [Op.in]: ['pending', 'active'] },
          },
       })
-
-      if (existingPlan) {
-         throw new ApiError(400, '이미 활성화된 플랜이 있습니다.')
+      if (existing) {
+         throw new ApiError(400, '이미 가입 대기중이거나 결제된 요금제입니다.')
       }
 
-      // 플랜 기간 계산
-      const endDate = calculateEndDate(startDate, plan.period || 12) // 기본 12개월
+      // 요금제 정보 조회
+      const plan = await Plans.findByPk(planId)
+      if (!plan) throw new ApiError(404, '요금제를 찾을 수 없습니다.')
 
-      // 요금 계산
-      const total_fee = plan.fee
-      const monthly_fee = Math.round(total_fee / (plan.period || 12))
+      // 약정기간(dis)이 12 또는 24면 월 분할, 아니면 전체 금액
+      let total_fee = plan.finalPrice
+      let monthly_fee = plan.finalPrice
+      if (plan.dis === '12' || plan.dis === '24') {
+         const months = Number(plan.dis)
+         monthly_fee = Math.ceil(total_fee / months)
+      }
 
-      // 사용자 플랜 생성
+      // UserPlan 생성 (status: pending)
       const userPlan = await UserPlan.create({
          userId,
          planId,
          total_fee,
          monthly_fee,
-         status: 'active',
-         startDate,
-         endDate,
+         status: 'pending',
+         startDate: new Date(),
       })
 
-      const result = await UserPlan.findByPk(userPlan.id, {
-         include: [
-            {
-               model: User,
-               as: 'user',
-               attributes: ['id', 'name', 'email'],
-            },
-            {
-               model: Plans,
-               as: 'plan',
-            },
-         ],
-      })
-
-      res.status(201).json({
-         status: 'success',
-         data: result,
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 사용자 플랜 목록 조회
- */
-exports.getUserPlans = async (req, res, next) => {
-   try {
-      const { status, page = 1, limit = 10 } = req.query
-      const where = {}
-      const offset = (page - 1) * limit
-
-      // 사용자 권한에 따른 필터
-      if (!req.user.isAdmin) {
-         where.userId = req.user.id
-      }
-
-      // 상태 필터
-      if (status) {
-         where.status = status
-      }
-
-      const { count, rows: userPlans } = await UserPlan.findAndCountAll({
-         where,
-         include: [
-            {
-               model: User,
-               as: 'user',
-               attributes: ['id', 'name', 'email'],
-            },
-            {
-               model: Plans,
-               as: 'plan',
-            },
-            {
-               model: Transactions,
-               as: 'transactions',
-               limit: 1,
-               order: [['date', 'DESC']],
-               where: {
-                  status: 'success',
-               },
-            },
-         ],
-         order: [['createdAt', 'DESC']],
-         offset,
-         limit: parseInt(limit),
-      })
-
-      res.status(200).json({
-         status: 'success',
-         data: {
-            userPlans,
-            pagination: {
-               total: count,
-               currentPage: parseInt(page),
-               totalPages: Math.ceil(count / limit),
-               limit: parseInt(limit),
-            },
-         },
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 사용자 플랜 상세 조회
- */
-exports.getUserPlan = async (req, res, next) => {
-   try {
-      const { id } = req.params
-
-      const userPlan = await UserPlan.findByPk(id, {
-         include: [
-            {
-               model: User,
-               as: 'user',
-               attributes: ['id', 'name', 'email'],
-            },
-            {
-               model: Plans,
-               as: 'plan',
-            },
-            {
-               model: Transactions,
-               as: 'transactions',
-               order: [['date', 'DESC']],
-               where: {
-                  status: 'success',
-               },
-            },
-         ],
-      })
-
-      if (!userPlan) {
-         throw new ApiError(404, '플랜 정보를 찾을 수 없습니다.')
-      }
-
-      // 권한 체크
-      if (!req.user.isAdmin && userPlan.userId !== req.user.id) {
-         throw new ApiError(403, '접근 권한이 없습니다.')
-      }
-
-      res.status(200).json({
-         status: 'success',
-         data: userPlan,
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 사용자 플랜 취소
- */
-exports.cancelUserPlan = async (req, res, next) => {
-   try {
-      const { id } = req.params
-      const { reason } = req.body
-
-      const userPlan = await UserPlan.findByPk(id)
-      if (!userPlan) {
-         throw new ApiError(404, '플랜 정보를 찾을 수 없습니다.')
-      }
-
-      // 권한 체크
-      if (!req.user.isAdmin && userPlan.userId !== req.user.id) {
-         throw new ApiError(403, '접근 권한이 없습니다.')
-      }
-
-      // 이미 취소된 플랜인지 확인
-      if (userPlan.status !== 'active') {
-         throw new ApiError(400, '이미 취소되었거나 만료된 플랜입니다.')
-      }
-
-      await userPlan.update({
-         status: 'cancelled',
-         endDate: new Date(),
-      })
-
-      res.status(200).json({
-         status: 'success',
-         message: '플랜이 취소되었습니다.',
-      })
-   } catch (error) {
-      next(error)
-   }
-}
-
-/**
- * 자동 플랜 만료 처리
- * (cron job으로 실행)
- */
-exports.checkExpiredPlans = async () => {
-   try {
-      const expiredPlans = await UserPlan.findAll({
-         where: {
-            status: 'active',
-            endDate: {
-               [Op.lt]: new Date(),
-            },
-         },
-      })
-
-      for (const plan of expiredPlans) {
-         await plan.update({
-            status: 'expired',
+      // 요금제의 agencyId로 알림 생성
+      const { Notifications } = require('../models')
+      if (plan.agencyId) {
+         await Notifications.create({
+            title: '새 요금제 가입 신청',
+            message: `${plan.name} 요금제에 가입 신청이 들어왔습니다.`,
+            type: 'NEW_SERVICE',
+            targetUserType: 'AGENCY',
+            agencyId: plan.agencyId,
          })
       }
 
-      return expiredPlans.length
+      res.status(201).json({ status: 'success', data: userPlan })
    } catch (error) {
-      console.error('플랜 만료 처리 중 오류 발생:', error)
-      throw error
+      next(error)
    }
-}
-
-// 종료일 계산 함수
-const calculateEndDate = (startDate, months) => {
-   const date = new Date(startDate)
-   date.setMonth(date.getMonth() + months)
-   return date
 }

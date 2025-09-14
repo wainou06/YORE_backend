@@ -10,16 +10,15 @@ exports.createUserPlan = async (req, res, next) => {
       if (!userId || !planId) {
          throw new ApiError(400, 'userId, planId는 필수입니다.')
       }
-      // 중복 가입/대기 방지: 이미 pending 또는 active 상태의 UserPlan이 있으면 에러
+      // 중복 가입/대기 방지: userId로 pending 또는 active 상태의 UserPlan이 있으면 에러 (planId 무관)
       const existing = await UserPlan.findOne({
          where: {
             userId,
-            planId,
             status: { [Op.in]: ['pending', 'active'] },
          },
       })
       if (existing) {
-         throw new ApiError(400, '이미 가입 대기중이거나 결제된 요금제입니다.')
+         throw new ApiError(400, '이미 등록한 요금제가 존재합니다. (진행중/대기중)')
       }
 
       // 요금제 정보 조회

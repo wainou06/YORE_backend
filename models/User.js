@@ -100,6 +100,10 @@ module.exports = (sequelize, DataTypes) => {
          foreignKey: 'userId',
          as: 'coupons',
       })
+      User.hasMany(models.Notifications, {
+         foreignKey: 'userId',
+         as: 'notifications',
+      })
    }
 
    User.prototype.validatePassword = async function (password) {

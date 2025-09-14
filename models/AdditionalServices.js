@@ -54,10 +54,6 @@ module.exports = (sequelize, DataTypes) => {
          as: 'analytics',
       })
 
-      AdditionalServices.hasMany(models.Notifications, {
-         foreignKey: 'serviceId',
-         as: 'notifications',
-      })
       AdditionalServices.hasMany(models.UserServices, {
          foreignKey: 'serviceId',
          as: 'userServices',

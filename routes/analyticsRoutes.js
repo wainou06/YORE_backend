@@ -10,6 +10,7 @@ router.use(isAdmin)
 router.get('/getHomeStatus', analyticsController.getHomeStatus)
 router.get('/getUserStatus', analyticsController.getUserStatus)
 router.get('/getPlansStatus', analyticsController.getPlansStatus)
+router.get('/getOrdersStatus', analyticsController.getOrdersStatus)
 
 // 전체 통계 조회 (관리자 및 통신사)
 router.get('/', isAuthenticated, analyticsController.getServiceStats)

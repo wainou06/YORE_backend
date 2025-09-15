@@ -112,6 +112,7 @@ exports.getUserStatus = async (req, res, next) => {
          message: '데이터를 가져왔어요',
       })
    } catch (error) {
+      console.log(`에러가 났네요. ${error}`)
       next(error)
    }
 }
@@ -127,7 +128,7 @@ exports.getPlansStatus = async (req, res, next) => {
          order: [['createdAt', 'DESC']],
       })
 
-      const totalPages = Math.ceil(totalCount / 10)
+      const totalPages = Math.ceil(totalCount / 8)
 
       const planPromises = plans.map(async (plan) => {
          const createdAt = yearMonthDay(plan.createdAt)
@@ -159,6 +160,74 @@ exports.getPlansStatus = async (req, res, next) => {
       })
 
       const data = await Promise.all(planPromises)
+
+      res.status(200).json({
+         success: true,
+         data,
+         totalPages,
+         message: '데이터를 가져왔어요',
+      })
+   } catch (error) {
+      next(error)
+   }
+}
+
+exports.getOrdersStatus = async (req, res, next) => {
+   try {
+      const page = req.query.page || 1
+      const offset = (page - 1) * 4
+
+      const { count: totalCount, rows: transactions } = await Transactions.findAndCountAll({
+         limit: 4,
+         offset: offset,
+         order: [['createdAt', 'DESC']],
+         include: [
+            {
+               model: User,
+               as: 'user',
+               attributes: ['name'],
+            },
+            {
+               model: UserPlan,
+               as: 'userPlan',
+               attributes: [],
+               include: {
+                  model: Plans,
+                  as: 'plan',
+                  attributes: ['name'],
+               },
+            },
+         ],
+      })
+
+      const totalPages = Math.ceil(totalCount / 4)
+
+      const transactionsPromises = transactions.map(async (transaction) => {
+         const orderDate = yearMonthDay(transaction.createdAt)
+         return {
+            id: 1,
+            customerName: '홍길동',
+            customerEmail: 'hong@example.com',
+            customerPhone: '010-1234-5678',
+            planName: 'SKT 5G 프리미엄',
+            planCarrier: 'SKT',
+            originalPrice: 85000,
+            amount: 63750,
+            discountRate: 25,
+            paymentMethod: 'card',
+            cardCompany: '삼성카드',
+            cardNumber: '5412-****-****-1234',
+            status: 'completed',
+            orderDate,
+            completedDate: '2025-09-05 14:31:23',
+            usePoint: 0,
+            earnedPoint: 1275,
+            contract: '24개월',
+            features: ['VIP 혜택', '데이터 완전 무제한'],
+         }
+      })
+
+      const data = await Promise.all(transactionsPromises)
 
       res.status(200).json({
          success: true,

@@ -36,7 +36,6 @@ exports.getHomeStatus = async (req, res, next) => {
             {
                model: UserPlan,
                as: 'userPlan',
-               attributes: [],
                include: {
                   model: Plans,
                   as: 'plan',
@@ -45,13 +44,16 @@ exports.getHomeStatus = async (req, res, next) => {
             },
          ],
       })
-      const recentOrders = recentOrdersData.map((transaction) => ({
-         userName: transaction.user.name,
-         planName: transaction.plan.name,
-         totalAmount: transaction.amount,
-         status: transaction.status,
-         date: transaction.date,
-      }))
+      const recentOrders = recentOrdersData.map((transaction) => {
+         const date = yearMonthDay(transaction.date)
+         return {
+            userName: transaction.user.name,
+            planName: transaction.userPlan?.plan?.name,
+            totalAmount: transaction.amount,
+            status: transaction.status,
+            date,
+         }
+      })
 
       const data = {
          totalUsers: totalUsers || 0,
@@ -112,6 +114,7 @@ exports.getUserStatus = async (req, res, next) => {
          message: '데이터를 가져왔어요',
       })
    } catch (error) {
+      console.log(`에러가 났네요. ${error}`)
       next(error)
    }
 }
@@ -127,7 +130,7 @@ exports.getPlansStatus = async (req, res, next) => {
          order: [['createdAt', 'DESC']],
       })
 
-      const totalPages = Math.ceil(totalCount / 10)
+      const totalPages = Math.ceil(totalCount / 8)
 
       const planPromises = plans.map(async (plan) => {
          const createdAt = yearMonthDay(plan.createdAt)
@@ -143,6 +146,7 @@ exports.getPlansStatus = async (req, res, next) => {
                carrier = '5G'
                break
          }
+         const featuresArray = JSON.parse(plan.benefits)
          return {
             id: plan.id,
             name: plan.name,
@@ -153,12 +157,90 @@ exports.getPlansStatus = async (req, res, next) => {
             price: plan.basePrice,
             discountRate: plan.discountAmount,
             status: plan.status,
-            features: plan.description,
+            features: featuresArray,
             createdAt,
          }
       })
 
       const data = await Promise.all(planPromises)
+
+      res.status(200).json({
+         success: true,
+         data,
+         totalPages,
+         message: '데이터를 가져왔어요',
+      })
+   } catch (error) {
+      next(error)
+   }
+}
+
+exports.getOrdersStatus = async (req, res, next) => {
+   try {
+      const page = req.query.page || 1
+      const offset = (page - 1) * 4
+
+      const { count: totalCount, rows: transactions } = await Transactions.findAndCountAll({
+         limit: 4,
+         offset: offset,
+         order: [['createdAt', 'DESC']],
+         include: [
+            {
+               model: User,
+               as: 'user',
+            },
+            {
+               model: UserPlan,
+               as: 'userPlan',
+               include: {
+                  model: Plans,
+                  as: 'plan',
+               },
+            },
+         ],
+      })
+
+      const totalPages = Math.ceil(totalCount / 4)
+
+      const transactionsPromises = transactions.map(async (transaction) => {
+         const orderDate = yearMonthDay(transaction.createdAt)
+         let carrier = 'null'
+         switch (transaction.userPlan.plan.type) {
+            case '2':
+               carrier = '3G'
+               break
+            case '3':
+               carrier = 'LTE'
+               break
+            case '6':
+               carrier = '5G'
+               break
+         }
+         const featuresArray = JSON.parse(transaction.userPlan.plan.benefits)
+         return {
+            id: transaction.id,
+            customerName: transaction.user.name,
+            customerEmail: transaction.user.email,
+            customerPhone: transaction.user.phone,
+            planName: transaction.userPlan?.plan?.name,
+            planCarrier: carrier,
+            originalPrice: transaction.userPlan.total_fee,
+            amount: transaction.userPlan.total_fee,
+            discountRate: 25,
+            paymentMethod: 'card',
+            cardCompany: transaction.paymentMethod,
+            cardNumber: '',
+            status: transaction.status,
+            orderDate,
+            completedDate: '2025-09-05 14:31:23',
+            usePoint: 0,
+            earnedPoint: 1275,
+            contract: '24개월',
+            features: featuresArray,
+         }
+      })
+
+      const data = await Promise.all(transactionsPromises)
 
       res.status(200).json({
          success: true,

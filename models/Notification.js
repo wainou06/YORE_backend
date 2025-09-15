@@ -26,10 +26,11 @@ module.exports = (sequelize, DataTypes) => {
                key: 'id',
             },
          },
-         serviceId: {
+         userId: {
             type: DataTypes.INTEGER,
+            allowNull: true,
             references: {
-               model: 'additional_services',
+               model: 'users',
                key: 'id',
             },
          },
@@ -59,9 +60,6 @@ module.exports = (sequelize, DataTypes) => {
                fields: ['agencyId'],
             },
             {
-               fields: ['serviceId'],
-            },
-            {
                fields: ['createdAt'],
             },
          ],
@@ -74,9 +72,9 @@ module.exports = (sequelize, DataTypes) => {
          as: 'agency',
       })
 
-      Notification.belongsTo(models.AdditionalServices, {
-         foreignKey: 'serviceId',
-         as: 'service',
+      Notification.belongsTo(models.User, {
+         foreignKey: 'userId',
+         as: 'user',
       })
    }
 

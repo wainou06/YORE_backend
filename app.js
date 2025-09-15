@@ -1,3 +1,7 @@
+// Swagger UI
+const swaggerUi = require('swagger-ui-express')
+const swaggerSpec = require('./utils/swagger')
+
 const axios = require('axios')
 const express = require('express')
 const cors = require('cors')
@@ -18,6 +22,7 @@ const notificationRoutes = require('./routes/notificationRoutes')
 const userPlanRoutes = require('./routes/userPlanRoutes')
 const transactionRoutes = require('./routes/transactionRoutes')
 const adminRoutes = require('./routes/adminRoutes')
+const agencyRoutes = require('./routes/agencyRoutes')
 const errorMiddleware = require('./middlewares/errorMiddleware')
 
 const { createOrUpdateUser, generateJWT } = require('./utils/auth')
@@ -40,18 +45,17 @@ app.use(express.urlencoded({ extended: true }))
 // Passport 설정
 passportConfig()
 
-// Middleware
-app.use(helmet())
-
-// 정적 파일 제공 설정
+// 정적 파일 제공 설정 (CORS 허용)
 app.use(
    '/uploads',
+   cors(),
    express.static(path.join(__dirname, 'uploads'), {
       // 한글 파일명 처리를 위한 설정
       setHeaders: (res, filePath) => {
          const filename = path.basename(filePath)
          const encodedFilename = encodeURIComponent(filename)
          res.setHeader('Content-Disposition', `inline; filename="${encodedFilename}"`)
+         res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
       },
    })
 )
@@ -96,7 +100,8 @@ app.use(
       contentSecurityPolicy: {
          directives: {
             defaultSrc: ["'self'"],
-            connectSrc: ["'self'", 'http://localhost:8000'],
+            connectSrc: ["'self'", `${process.env.APP_API_URL}`],
+            imgSrc: ["'self'", 'data:', `${process.env.APP_API_URL}`, `${process.env.FRONTEND_URL}`],
          },
       },
    })
@@ -104,9 +109,6 @@ app.use(
 
 app.use(passport.initialize())
 app.use(passport.session())
-
-// Static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 // 카카오 콜백 처리
 authRoutes.get('/kakao/callback', async (req, res) => {
@@ -158,8 +160,12 @@ authRoutes.get('/kakao/callback', async (req, res) => {
    }
 })
 
+// Swagger 문서 라우트
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+
 // Routes
 app.use('/auth', authRoutes)
+app.use('/agencies', agencyRoutes)
 app.use('/surveys', surveyRoutes)
 app.use('/plans', planRoutes)
 app.use('/services', serviceRoutes)

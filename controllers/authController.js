@@ -105,8 +105,8 @@ exports.login = (req, res, next) => {
          }
       }
 
-      // JWT 토큰 발급
-      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+      // JWT 토큰 발급 (access 필드 포함)
+      const token = jwt.sign({ id: user.id, access: user.access }, process.env.JWT_SECRET, { expiresIn: '1h' })
       res.json({
          success: true,
          message: '로그인 성공',
@@ -234,7 +234,7 @@ exports.updateAgencyProfile = async (req, res, next) => {
          return res.status(403).json({ success: false, message: '기업 회원만 접근할 수 있습니다.' })
       }
 
-      const { agencyName, managerName } = req.body
+      const { agencyName, businessNumber, managerName } = req.body
       const agency = await Agency.findOne({ where: { userId: req.user.id } })
 
       if (!agency) {
@@ -243,6 +243,7 @@ exports.updateAgencyProfile = async (req, res, next) => {
 
       await agency.update({
          agencyName: agencyName || agency.agencyName,
+         businessNumber: businessNumber || agency.businessNumber, // 👈 추가
          managerName: managerName || agency.managerName,
       })
 
@@ -279,19 +280,31 @@ exports.changePassword = async (req, res, next) => {
    }
 }
 
-// 이메일 변경
+// 변경된 authController.js
 exports.changeEmail = async (req, res, next) => {
    try {
-      const { newEmail } = req.body
+      const { email } = req.body // 👈 newEmail → email로 변경
 
-      const exists = await User.findOne({ where: { email: newEmail } })
-      if (exists) return res.status(400).json({ success: false, message: '이미 존재하는 이메일입니다.' })
+      if (!email) {
+         return res.status(400).json({ success: false, message: '이메일이 필요합니다.' })
+      }
 
+      // 이미 존재하는 이메일 체크
+      const exists = await User.findOne({ where: { email } })
+      if (exists) {
+         return res.status(400).json({ success: false, message: '이미 존재하는 이메일입니다.' })
+      }
+
+      // 현재 로그인한 유저 기준으로 업데이트
       const user = await User.findByPk(req.user.id)
-      user.email = newEmail
+      if (!user) {
+         return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
+      }
+
+      user.email = email
       await user.save()
 
-      res.json({ success: true, message: '이메일 변경 완료' })
+      res.json({ success: true, message: '이메일 변경 완료', user: { id: user.id, email: user.email } })
    } catch (err) {
       logger.error(err.stack || err)
       next(err)
@@ -299,15 +312,23 @@ exports.changeEmail = async (req, res, next) => {
 }
 
 // 생일 변경
-
 exports.changeBirth = async (req, res, next) => {
    try {
+      console.log('changeBirth 요청 body:', req.body) // 👈 확인용
       const { birth } = req.body
+      if (!birth) {
+         return res.status(400).json({ success: false, message: '생일이 필요합니다.' })
+      }
+
       const user = await User.findByPk(req.user.id)
+      if (!user) {
+         return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
+      }
+
       user.birth = birth
       await user.save()
 
-      res.json({ success: true, message: '생일이 업데이트되었습니다.' })
+      res.json({ success: true, message: '생일이 업데이트되었습니다.', user })
    } catch (err) {
       logger.error(err.stack || err)
       next(err)

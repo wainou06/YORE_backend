@@ -35,7 +35,8 @@ const errorMiddleware = (err, req, res, next) => {
    }
 
    // 기본 에러 응답
-   res.status(err.status || 500).json({
+   const status = typeof err.status === 'number' ? err.status : 500
+   res.status(status).json({
       success: false,
       message: err.message || '서버 내부 오류가 발생했습니다.',
    })

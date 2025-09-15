@@ -1,15 +1,13 @@
 const express = require('express')
 const router = express.Router()
 const serviceController = require('../controllers/serviceController')
-const { isAuthenticated, isAgency } = require('../middlewares/authMiddleware')
+const { isAuthenticated } = require('../middlewares/authMiddleware')
 
-// Public routes (공개 접근 가능)
-router.get('/', serviceController.getAllServices)
-router.get('/:id', serviceController.getService)
-
-// Agency routes (통신사 전용)
-router.post('/', isAuthenticated, isAgency, serviceController.createService)
-router.put('/:id', isAuthenticated, isAgency, serviceController.updateService)
-router.delete('/:id', isAuthenticated, isAgency, serviceController.deleteService)
+router.post('/', isAuthenticated, (req, res, next) => {
+   if (req.user?.access === 'agency' || req.admin) {
+      return serviceController.createService(req, res, next)
+   }
+   return res.status(403).json({ message: '권한이 없습니다.' })
+})
 
 module.exports = router

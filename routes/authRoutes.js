@@ -58,4 +58,7 @@ router.post('/change-birth', isAuthenticated, authController.changeBirth)
 // 카카오 가능 라우트 추가
 router.get('/kakao/callback', authController.kakaoCallback)
 
+// 비밀번호 찾기
+router.post('/find-password', authController.findPassword)
+
 module.exports = router

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken')
 const { User, Agency } = require('../models')
 const logger = require('../utils/logger')
+const bcrypt = require('bcryptjs')
 
 exports.register = async (req, res, next) => {
    try {
@@ -332,5 +333,32 @@ exports.changeBirth = async (req, res, next) => {
    } catch (err) {
       logger.error(err.stack || err)
       next(err)
+   }
+}
+
+// 비밀번호 찾기
+exports.findPassword = async (req, res) => {
+   try {
+      const { method, value } = req.body
+      let user
+      if (method === 'email') {
+         user = await User.findOne({ where: { email: value } })
+      } else if (method === 'phone') {
+         user = await User.findOne({ where: { phone: value } })
+      }
+
+      if (!user) {
+         return res.json({ success: false, message: '해당 사용자가 존재하지 않습니다.' })
+      }
+
+      // 임시 비밀번호 생성
+      const tempPassword = Math.random().toString(36).slice(-8)
+      user.password = await bcrypt.hash(tempPassword, 10)
+      await user.save()
+
+      return res.json({ success: true, tempPassword })
+   } catch (err) {
+      console.error(err)
+      res.status(500).json({ success: false, message: '서버 오류 발생' })
    }
 }

@@ -36,7 +36,6 @@ exports.getHomeStatus = async (req, res, next) => {
             {
                model: UserPlan,
                as: 'userPlan',
-               attributes: [],
                include: {
                   model: Plans,
                   as: 'plan',
@@ -45,13 +44,16 @@ exports.getHomeStatus = async (req, res, next) => {
             },
          ],
       })
-      const recentOrders = recentOrdersData.map((transaction) => ({
-         userName: transaction.user.name,
-         planName: transaction.plan.name,
-         totalAmount: transaction.amount,
-         status: transaction.status,
-         date: transaction.date,
-      }))
+      const recentOrders = recentOrdersData.map((transaction) => {
+         const date = yearMonthDay(transaction.date)
+         return {
+            userName: transaction.user.name,
+            planName: transaction.userPlan?.plan?.name,
+            totalAmount: transaction.amount,
+            status: transaction.status,
+            date,
+         }
+      })
 
       const data = {
          totalUsers: totalUsers || 0,
@@ -144,6 +146,7 @@ exports.getPlansStatus = async (req, res, next) => {
                carrier = '5G'
                break
          }
+         const featuresArray = JSON.parse(plan.benefits)
          return {
             id: plan.id,
             name: plan.name,
@@ -154,7 +157,7 @@ exports.getPlansStatus = async (req, res, next) => {
             price: plan.basePrice,
             discountRate: plan.discountAmount,
             status: plan.status,
-            features: plan.description,
+            features: featuresArray,
             createdAt,
          }
       })
@@ -185,16 +188,13 @@ exports.getOrdersStatus = async (req, res, next) => {
             {
                model: User,
                as: 'user',
-               attributes: ['name'],
             },
             {
                model: UserPlan,
                as: 'userPlan',
-               attributes: [],
                include: {
                   model: Plans,
                   as: 'plan',
-                  attributes: ['name'],
                },
             },
          ],
@@ -204,26 +204,39 @@ exports.getOrdersStatus = async (req, res, next) => {
 
       const transactionsPromises = transactions.map(async (transaction) => {
          const orderDate = yearMonthDay(transaction.createdAt)
+         let carrier = 'null'
+         switch (transaction.userPlan.plan.type) {
+            case '2':
+               carrier = '3G'
+               break
+            case '3':
+               carrier = 'LTE'
+               break
+            case '6':
+               carrier = '5G'
+               break
+         }
+         const featuresArray = JSON.parse(transaction.userPlan.plan.benefits)
          return {
-            id: 1,
-            customerName: '홍길동',
-            customerEmail: 'hong@example.com',
-            customerPhone: '010-1234-5678',
-            planName: 'SKT 5G 프리미엄',
-            planCarrier: 'SKT',
-            originalPrice: 85000,
-            amount: 63750,
+            id: transaction.id,
+            customerName: transaction.user.name,
+            customerEmail: transaction.user.email,
+            customerPhone: transaction.user.phone,
+            planName: transaction.userPlan?.plan?.name,
+            planCarrier: carrier,
+            originalPrice: transaction.userPlan.total_fee,
+            amount: transaction.userPlan.total_fee,
             discountRate: 25,
             paymentMethod: 'card',
-            cardCompany: '삼성카드',
-            cardNumber: '5412-****-****-1234',
-            status: 'completed',
+            cardCompany: transaction.paymentMethod,
+            cardNumber: '',
+            status: transaction.status,
             orderDate,
             completedDate: '2025-09-05 14:31:23',
             usePoint: 0,
             earnedPoint: 1275,
             contract: '24개월',
-            features: ['VIP 혜택', '데이터 완전 무제한'],
+            features: featuresArray,
          }
       })
 

@@ -31,7 +31,7 @@ module.exports = (sequelize, DataTypes) => {
          userPlanId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            unique: true, // 1:1 관계 보장
+            // unique: true, // 1:1 관계 보장
             references: {
                model: 'user_plans',
                key: 'id',

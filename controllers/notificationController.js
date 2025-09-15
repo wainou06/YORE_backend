@@ -30,7 +30,8 @@ exports.createNotification = async (req, res) => {
 // 알림 목록 조회 (userId 또는 agencyId)
 exports.getNotifications = async (req, res) => {
    try {
-      const { user } = req
+      const { user, admin } = req
+      console.log(`확인: ${JSON.stringify(admin)}`)
       let where = {}
       if (user.access === 'user') {
          where.userId = user.id
@@ -43,7 +44,7 @@ exports.getNotifications = async (req, res) => {
             // 소속된 agency가 없으면 빈 배열 반환
             return res.json([])
          }
-      } else if (user.access === 'admin') {
+      } else if (admin) {
          // 관리자는 전체 또는 targetUserType: 'ADMIN' 알림
          where.targetUserType = 'ADMIN'
       }

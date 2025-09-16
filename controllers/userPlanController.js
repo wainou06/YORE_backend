@@ -1,4 +1,4 @@
-const { UserPlan, User, Plans, Transactions } = require('../models')
+const { UserPlan, User, Plans, Transactions, Surveys } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
 
@@ -49,6 +49,19 @@ exports.createUserPlan = async (req, res, next) => {
          startDate,
          endDate,
       })
+
+      // Surveys에 데이터 생성 (planId로 plans 값 불러오기)
+      if (plan) {
+         await Surveys.create({
+            planId: plan.id,
+            voice: plan.voice,
+            data: plan.data,
+            sms: plan.sms,
+            age: plan.age,
+            type: plan.type,
+            dis: plan.dis,
+         })
+      }
 
       // 요금제의 agencyId로 알림 생성
       const { Notifications } = require('../models')

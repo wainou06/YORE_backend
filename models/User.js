@@ -71,8 +71,11 @@ module.exports = (sequelize, DataTypes) => {
             },
             beforeUpdate: async (user) => {
                if (user.changed('password')) {
-                  const salt = await bcrypt.genSalt(10)
-                  user.password = await bcrypt.hash(user.password, salt)
+                  // 비밀번호가 평문인지 확인 (간단하게 60자 이상이면 해시로 간주)
+                  if (user.password.length < 60) {
+                     const salt = await bcrypt.genSalt(10)
+                     user.password = await bcrypt.hash(user.password, salt)
+                  }
                }
             },
          },

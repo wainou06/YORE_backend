@@ -1,4 +1,4 @@
-const { Transactions, User, UserPlan, Plans } = require('../models')
+const { Transactions, Notifications, UserPlan, Plans } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
 const { retryPayment } = require('../utils/payment')
@@ -39,7 +39,6 @@ exports.createTransaction = async (req, res, next) => {
          await userPlan.update({ status: 'active' }, { transaction: t })
 
          // 알림 자동 생성 (가입 승인)
-         const { Notifications, Plans } = require('../models')
          const planInfo = await Plans.findByPk(userPlan.planId)
          await Notifications.create({
             title: '요금제 가입 승인',

@@ -31,7 +31,6 @@ exports.createNotification = async (req, res) => {
 exports.getNotifications = async (req, res) => {
    try {
       const { user, admin } = req
-      console.log(`확인: ${JSON.stringify(admin)}`)
       let where = {}
       if (user.access === 'user') {
          where.userId = user.id
@@ -94,10 +93,13 @@ exports.deleteNotification = async (req, res) => {
          await notification.destroy()
          return res.json({ message: '삭제 완료' })
       }
-      // 통신사: 본인 소속 알림만 삭제 가능
-      if (user.access === 'agency' && notification.agencyId === user.agency?.id) {
-         await notification.destroy()
-         return res.json({ message: '삭제 완료' })
+      // 통신사: 본인 소속 알림만 삭제 가능 (agencyId 직접 조회)
+      if (user.access === 'agency') {
+         const agency = await Agency.findOne({ where: { userId: user.id } })
+         if (agency && notification.agencyId === agency.id) {
+            await notification.destroy()
+            return res.json({ message: '삭제 완료' })
+         }
       }
       // 사용자: 본인 알림만 삭제 가능
       if (user.access === 'user' && notification.userId === user.id) {

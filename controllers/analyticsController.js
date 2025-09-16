@@ -1,7 +1,7 @@
 const { ServiceAnalytics, AdditionalServices, Agency } = require('../models')
 const { User, Transactions, Plans, UserPlan } = require('../models')
 const ApiError = require('../utils/apiError')
-const { Op } = require('sequelize')
+const { Op, where } = require('sequelize')
 const { nowDateMinus, yearMonthDay } = require('../utils/dateSet')
 
 exports.getHomeStatus = async (req, res, next) => {
@@ -77,11 +77,20 @@ exports.getUserStatus = async (req, res, next) => {
    try {
       const page = req.query.page || 1
       const offset = (page - 1) * 10
+      const filter = req.query.filter || ''
+
+      let whereClause = {}
+      if (filter) {
+         whereClause = {
+            [Op.or]: [{ phone: { [Op.like]: `%${filter}%` } }, { email: { [Op.like]: `%${filter}%` } }, { name: { [Op.like]: `%${filter}%` } }],
+         }
+      }
 
       const { count: totalCount, rows: users } = await User.findAndCountAll({
          limit: 10,
          offset: offset,
          order: [['createdAt', 'DESC']],
+         where: whereClause,
       })
 
       const totalPages = Math.ceil(totalCount / 10)
@@ -123,11 +132,20 @@ exports.getPlansStatus = async (req, res, next) => {
    try {
       const page = req.query.page || 1
       const offset = (page - 1) * 8
+      const filter = req.query.filter || ''
+
+      let whereClause = {}
+      if (filter) {
+         whereClause = {
+            [Op.or]: [{ type: { [Op.like]: `%${filter}%` } }],
+         }
+      }
 
       const { count: totalCount, rows: plans } = await Plans.findAndCountAll({
          limit: 8,
          offset: offset,
          order: [['createdAt', 'DESC']],
+         where: whereClause,
       })
 
       const totalPages = Math.ceil(totalCount / 8)
@@ -177,27 +195,49 @@ exports.getPlansStatus = async (req, res, next) => {
 
 exports.getOrdersStatus = async (req, res, next) => {
    try {
-      const page = req.query.page || 1
+      const page = parseInt(req.query.page) || 1
       const offset = (page - 1) * 4
+      const filterName = req.query.filterName || ''
+      const filterStatus = req.query.filterStatus || ''
+
+      let whereClause = {}
+      const whereConditions = []
+
+      if (filterName) {
+         whereConditions.push({
+            [Op.or]: [{ '$user.name$': { [Op.like]: `%${filterName}%` } }, { '$user.email$': { [Op.like]: `%${filterName}%` } }, { '$userPlan.plan.name$': { [Op.like]: `%${filterName}%` } }],
+         })
+      }
+
+      if (filterStatus) {
+         whereConditions.push({ status: filterStatus })
+      }
+
+      whereClause = whereConditions.length > 0 ? { [Op.and]: whereConditions } : {}
 
       const { count: totalCount, rows: transactions } = await Transactions.findAndCountAll({
          limit: 4,
          offset: offset,
          order: [['createdAt', 'DESC']],
+         where: whereClause,
          include: [
             {
                model: User,
                as: 'user',
+               required: true,
             },
             {
                model: UserPlan,
                as: 'userPlan',
+               required: true,
                include: {
                   model: Plans,
                   as: 'plan',
+                  required: true,
                },
             },
          ],
+         subQuery: false,
       })
 
       const totalPages = Math.ceil(totalCount / 4)

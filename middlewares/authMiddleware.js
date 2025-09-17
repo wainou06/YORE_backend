@@ -8,7 +8,7 @@ exports.isAuthenticated = async (req, res, next) => {
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
          return res.status(401).json({
             success: false,
-            message: '로그인 해주세요.',
+            message: '로그인이 필요합니다.',
          })
       }
 

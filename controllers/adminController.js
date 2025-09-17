@@ -212,3 +212,10 @@ exports.exportLogs = async (req, res, next) => {
       next(error)
    }
 }
+
+exports.editPlansStatus = async (req, res, next) => {
+   try {
+   } catch (error) {
+      next(error)
+   }
+}

@@ -18,6 +18,22 @@ async function seedData() {
       console.log('기본 쿠폰 데이터 이미 존재')
    }
 
+   // 생일쿠폰 시드
+   const birthdayExist = await Coupons.findOne({ where: { couponNm: '생일쿠폰' } })
+   if (!birthdayExist) {
+      await Coupons.create({
+         couponNm: '생일쿠폰',
+         discount: 20,
+         expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 유효
+         description: '생일 축하 쿠폰',
+         totalQuantity: -1,
+         remainingQuantity: -1,
+      })
+      console.log('생일쿠폰 데이터 생성 완료')
+   } else {
+      console.log('생일쿠폰 데이터 이미 존재')
+   }
+
    // 어드민 시드
    const adminExist = await Admin.findOne({ where: { email: 'admin@yore.com' } })
    let adminId

@@ -23,6 +23,7 @@
       "morgan": "^1.10.0",
       "multer": "^1.4.5-lts.1",
       "mysql2": "^3.6.1",
+      "node-cron": "^4.2.1",
       "passport": "^0.7.0",
       "passport-jwt": "^4.0.1",
       "passport-local": "^1.0.0",

@@ -345,7 +345,11 @@ exports.changeBirth = async (req, res, next) => {
       user.birth = birth
       await user.save()
 
-      res.json({ success: true, message: '생일이 업데이트되었습니다.', user })
+      res.json({
+         success: true,
+         message: '생일이 업데이트되었습니다.',
+         user,
+      })
    } catch (err) {
       logger.error(err.stack || err)
       next(err)

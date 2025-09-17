@@ -11,6 +11,13 @@ export const dayLeft = (date) => {
    return Math.ceil(newDate / millisecondsOneDay)
 }
 
+export const dayMinusDay = (date, otherDate) => {
+   if (!date || !otherDate) return
+   const leftDate = new Date(date) - new Date(otherDate)
+   const millisecondsOneDay = (1000 * 60 * 60 * 24 * 365) / 12
+   return Math.ceil(leftDate / millisecondsOneDay)
+}
+
 export const datePass = (date) => {
    if (!date) return
    return new Date(date) >= new Date()

@@ -10,8 +10,8 @@ router.post('/register', adminController.registerAdmin)
 router.post('/login', adminController.loginAdmin)
 
 // 모든 관리자 라우트에 인증 및 관리자 권한 검사 미들웨어 적용
-// router.use(isAuthenticated)
-// router.use(isAdmin)
+router.use(isAuthenticated)
+router.use(isAdmin)
 
 // 사용자 관리
 router.get('/users', adminController.getAllUsers)

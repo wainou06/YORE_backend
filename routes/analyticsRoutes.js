@@ -11,6 +11,8 @@ router.get('/getHomeStatus', analyticsController.getHomeStatus)
 router.get('/getUserStatus', analyticsController.getUserStatus)
 router.get('/getPlansStatus', analyticsController.getPlansStatus)
 router.get('/getOrdersStatus', analyticsController.getOrdersStatus)
+router.get('/getUserDetail', analyticsController.getUserDetail)
+router.put('/putPlanStatus', analyticsController.putPlanStatus)
 
 // 전체 통계 조회 (관리자 및 통신사)
 router.get('/', isAuthenticated, analyticsController.getServiceStats)

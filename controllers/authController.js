@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const { User, Agency } = require('../models')
+const { User, Agency, Coupons, UserCoupon } = require('../models')
 const logger = require('../utils/logger')
 const bcrypt = require('bcryptjs')
 
@@ -53,6 +53,22 @@ exports.register = async (req, res, next) => {
                },
                { transaction: t }
             )
+         }
+
+         // 일반회원만 웰컴쿠폰 발급
+         if (access !== 'agency') {
+            const welcomeCoupon = await Coupons.findOne({ where: { couponNm: '웰컴쿠폰' }, transaction: t })
+            if (welcomeCoupon) {
+               await UserCoupon.create(
+                  {
+                     userId: newUser.id,
+                     couponId: welcomeCoupon.id,
+                     status: 'active',
+                     issuedDate: new Date(),
+                  },
+                  { transaction: t }
+               )
+            }
          }
 
          await t.commit()
@@ -329,7 +345,11 @@ exports.changeBirth = async (req, res, next) => {
       user.birth = birth
       await user.save()
 
-      res.json({ success: true, message: '생일이 업데이트되었습니다.', user })
+      res.json({
+         success: true,
+         message: '생일이 업데이트되었습니다.',
+         user,
+      })
    } catch (err) {
       logger.error(err.stack || err)
       next(err)

@@ -104,3 +104,14 @@ exports.isAgency = async (req, res, next) => {
       })
    }
 }
+
+// 선택적 인증 미들웨어
+exports.optionalAuth = async (req, res, next) => {
+   const authHeader = req.headers.authorization
+   if (authHeader && authHeader.startsWith('Bearer ')) {
+      // 인증 헤더가 있으면 기존 인증 미들웨어 실행
+      return exports.isAuthenticated(req, res, next)
+   }
+   // 인증 헤더가 없으면 비로그인으로 처리
+   next()
+}

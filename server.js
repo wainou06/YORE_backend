@@ -3,6 +3,7 @@ const { sequelize } = require('./models')
 const logger = require('./utils/logger')
 const path = require('path')
 const fs = require('fs')
+const seed = require('./scripts/seed')
 
 // uploads 디렉토리 생성
 const uploadsDir = path.join(__dirname, 'uploads')
@@ -22,6 +23,8 @@ async function startServer() {
       if (process.env.NODE_ENV === 'development') {
          await sequelize.sync({ force: false })
          logger.info('Database synchronized')
+         // DB 동기화 후 기본 데이터 시드
+         await seed()
       }
 
       app.listen(PORT, () => {

@@ -68,12 +68,15 @@ exports.getNotifications = async (req, res) => {
 exports.markAsRead = async (req, res) => {
    try {
       const { id } = req.params
+      const { admin } = req
 
       const notification = await Notifications.findByPk(id)
       if (!notification) return res.status(404).json({ message: '알림 없음' })
       // 본인 알림만 읽음 처리
-      if (req.user.access === 'user' && notification.userId !== req.user.id) {
-         return res.status(403).json({ message: '권한 없음' })
+      if (!admin) {
+         if (req.user.access === 'user' && notification.userId !== req.user.id) {
+            return res.status(403).json({ message: '권한 없음' })
+         }
       }
       notification.isRead = true
       await notification.save()
@@ -87,12 +90,13 @@ exports.markAsRead = async (req, res) => {
 exports.deleteNotification = async (req, res) => {
    try {
       const { id } = req.params
+      const { admin } = req
       const notification = await Notifications.findByPk(id)
       if (!notification) return res.status(404).json({ message: '알림 없음' })
 
       const user = req.user
       // 관리자: 전체 삭제 가능
-      if (user.access === 'admin') {
+      if (admin) {
          await notification.destroy()
          return res.json({ message: '삭제 완료' })
       }

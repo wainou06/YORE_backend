@@ -166,7 +166,7 @@ exports.kakaoCallback = async (req, res) => {
    }
 }
 
-exports.getProfile = async (req, res) => {
+exports.getProfile = async (req, res, next) => {
    try {
       const user = await User.findOne({
          where: { id: req.user.id },

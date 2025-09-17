@@ -1,7 +1,5 @@
 const { Transactions, Notifications, UserPlan, Plans } = require('../models')
 const ApiError = require('../utils/apiError')
-const { Op } = require('sequelize')
-const { retryPayment } = require('../utils/payment')
 const sequelize = require('../models').sequelize
 
 // [POST] /transactions - 결제(Transactions) 생성 및 UserPlan 상태 변경

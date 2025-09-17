@@ -1,4 +1,4 @@
-const { UserPlan, User, Plans, Transactions, Surveys } = require('../models')
+const { UserPlan, User, Plans, Transactions, Surveys, Notifications } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
 
@@ -64,7 +64,6 @@ exports.createUserPlan = async (req, res, next) => {
       }
 
       // 요금제의 agencyId로 알림 생성
-      const { Notifications } = require('../models')
       if (plan.agencyId) {
          await Notifications.create({
             title: '새 요금제 가입 신청',

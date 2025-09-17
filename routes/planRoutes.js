@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const planController = require('../controllers/planController')
-const { isAuthenticated } = require('../middlewares/authMiddleware')
+const { isAuthenticated, optionalAuth } = require('../middlewares/authMiddleware')
 const { upload } = require('../utils/fileUpload')
 
 // 요금제 생성 (관리자/통신사만)
@@ -19,7 +19,7 @@ router.post(
 )
 
 // 요금제 목록 조회 (권한별 분기)
-router.get('/', isAuthenticated, planController.getPlans)
+router.get('/', optionalAuth, planController.getPlans)
 
 // 특정 요금제 상세 조회
 router.get('/:id', planController.getPlanById)

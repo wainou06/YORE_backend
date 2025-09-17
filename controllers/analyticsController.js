@@ -2,7 +2,7 @@ const { ServiceAnalytics, AdditionalServices, Agency } = require('../models')
 const { User, Transactions, Plans, UserPlan } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op, where } = require('sequelize')
-const { nowDateMinus, yearMonthDay } = require('../utils/dateSet')
+const { nowDateMinus, yearMonthDay, dayLeft, dayMinusDay } = require('../utils/dateSet')
 
 exports.getHomeStatus = async (req, res, next) => {
    try {
@@ -26,7 +26,7 @@ exports.getHomeStatus = async (req, res, next) => {
       const recentOrdersData = await Transactions.findAll({
          order: [['date', 'DESC']],
          limit: 8,
-         attributes: ['amount', 'status', 'date'],
+         attributes: ['amount', 'status', 'date', 'id'],
          include: [
             {
                model: User,
@@ -47,6 +47,7 @@ exports.getHomeStatus = async (req, res, next) => {
       const recentOrders = recentOrdersData.map((transaction) => {
          const date = yearMonthDay(transaction.date)
          return {
+            id: transaction.id,
             userName: transaction.user.name,
             planName: transaction.userPlan?.plan?.name,
             totalAmount: transaction.amount,
@@ -110,7 +111,7 @@ exports.getUserStatus = async (req, res, next) => {
             phone: user.phone,
             createdAt,
             orderCount: orderCount || 0,
-            status: 'active',
+            status: user.access,
          }
       })
 
@@ -257,6 +258,13 @@ exports.getOrdersStatus = async (req, res, next) => {
                break
          }
          const featuresArray = JSON.parse(transaction.userPlan.plan.benefits)
+
+         const leftDate = dayMinusDay(transaction.userPlan.endDate, transaction.userPlan.startDate)
+
+         let point = 0
+         if (leftDate >= 24) point = 1000
+         else if (leftDate >= 12) point = 500
+
          return {
             id: transaction.id,
             customerName: transaction.user.name,
@@ -267,15 +275,13 @@ exports.getOrdersStatus = async (req, res, next) => {
             originalPrice: transaction.userPlan.total_fee,
             amount: transaction.userPlan.total_fee,
             discountRate: 25,
-            paymentMethod: 'card',
             cardCompany: transaction.paymentMethod,
-            cardNumber: '',
             status: transaction.status,
             orderDate,
-            completedDate: '2025-09-05 14:31:23',
+            completedDate: transaction.date,
             usePoint: 0,
-            earnedPoint: 1275,
-            contract: '24개월',
+            earnedPoint: point,
+            contract: `${leftDate}개월`,
             features: featuresArray,
          }
       })
@@ -287,6 +293,46 @@ exports.getOrdersStatus = async (req, res, next) => {
          data,
          totalPages,
          message: '데이터를 가져왔어요',
+      })
+   } catch (error) {
+      next(error)
+   }
+}
+
+exports.getUserDetail = async (req, res, next) => {
+   try {
+      const userId = req.query.id
+      const userDetail = await User.findOne({
+         where: { id: userId },
+      })
+
+      res.status(200).json({
+         success: true,
+         userDetail,
+         message: '데이터를 가져왔어요',
+      })
+   } catch (error) {
+      next(error)
+   }
+}
+
+exports.putPlanStatus = async (req, res, next) => {
+   try {
+      const planId = req.query.id
+      const plan = await Plans.findOne({
+         where: { id: planId },
+      })
+      if (!plan) {
+         throw new ApiError(400, '요금제를 찾지 못했습니다.')
+      }
+
+      await plan.update({
+         status: req.query.status,
+      })
+
+      res.status(200).json({
+         success: true,
+         message: '데이터를 수정했어요',
       })
    } catch (error) {
       next(error)

@@ -32,16 +32,18 @@ exports.getNotifications = async (req, res) => {
    try {
       const { user, admin } = req
       let where = {}
-      if (user.access === 'user') {
-         where.userId = user.id
-      } else if (user.access === 'agency') {
-         // 항상 Agency 모델에서 userId로 agencyId 조회
-         const agency = await Agency.findOne({ where: { userId: user.id } })
-         if (agency && agency.id) {
-            where.agencyId = agency.id
-         } else {
-            // 소속된 agency가 없으면 빈 배열 반환
-            return res.json([])
+      if (user) {
+         if (user.access === 'user') {
+            where.userId = user.id
+         } else if (user.access === 'agency') {
+            // 항상 Agency 모델에서 userId로 agencyId 조회
+            const agency = await Agency.findOne({ where: { userId: user.id } })
+            if (agency && agency.id) {
+               where.agencyId = agency.id
+            } else {
+               // 소속된 agency가 없으면 빈 배열 반환
+               return res.json([])
+            }
          }
       } else if (admin) {
          // 관리자는 전체 또는 targetUserType: 'ADMIN' 알림
@@ -62,10 +64,11 @@ exports.getNotifications = async (req, res) => {
    }
 }
 
-// 알림 읽음 처리 (본인만)
+// 알림 읽음 처리 (사용자 본인만)
 exports.markAsRead = async (req, res) => {
    try {
       const { id } = req.params
+
       const notification = await Notifications.findByPk(id)
       if (!notification) return res.status(404).json({ message: '알림 없음' })
       // 본인 알림만 읽음 처리

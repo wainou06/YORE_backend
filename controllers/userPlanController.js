@@ -1,4 +1,4 @@
-const { UserPlan, User, Plans, Transactions, Surveys, Notifications } = require('../models')
+const { UserPlan, User, Plans, Transactions, Surveys, Notifications, AdditionalServices, UserServices } = require('../models')
 const ApiError = require('../utils/apiError')
 const { Op } = require('sequelize')
 
@@ -6,7 +6,7 @@ const { yearMonthDay } = require('../utils/dateSet')
 
 exports.createUserPlan = async (req, res, next) => {
    try {
-      const { userId, planId } = req.body
+      const { userId, planId, selectedServiceIds } = req.body
       if (!userId || !planId) {
          throw new ApiError(400, 'userId, planId는 필수입니다.')
       }
@@ -61,6 +61,23 @@ exports.createUserPlan = async (req, res, next) => {
             type: plan.type,
             dis: plan.dis,
          })
+      }
+
+      // UserServices 생성: 사용자가 선택한 부가서비스만 생성
+      if (plan && Array.isArray(selectedServiceIds) && selectedServiceIds.length > 0) {
+         const additionalServices = await AdditionalServices.findAll({
+            where: { planId: plan.id, id: selectedServiceIds },
+         })
+         for (const svc of additionalServices) {
+            await UserServices.create({
+               userId,
+               serviceId: svc.id,
+               monthly_fee: svc.fee,
+               status: 'active',
+               startDate,
+               endDate,
+            })
+         }
       }
 
       // 요금제의 agencyId로 알림 생성

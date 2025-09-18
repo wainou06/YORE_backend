@@ -726,6 +726,8 @@ router.post('/change-email', isAuthenticated, authController.changeEmail)
  *                   type: string
  *                   example: 서버 오류 발생
  */
+router.post('/change-password', isAuthenticated, validate(changePasswordValidation), authController.changePassword)
+router.post('/change-email', isAuthenticated, validate([body('email').isEmail().withMessage('유효한 이메일을 입력해주세요.')]), authController.changeEmail)
 router.post('/change-birth', isAuthenticated, authController.changeBirth)
 
 /**

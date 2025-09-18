@@ -269,6 +269,13 @@ exports.changePassword = async (req, res, next) => {
          return res.status(400).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' })
       }
 
+
+      // 새 비밀번호 유효성 검사 추가
+      if (!newPassword || newPassword.length < 6) {
+         return res.status(400).json({ success: false, message: '새 비밀번호는 최소 6자 이상이어야 합니다.' })
+      }
+
+      // 새 비밀번호로 업데이트
       user.password = newPassword
       await user.save()
 

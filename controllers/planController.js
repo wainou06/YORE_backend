@@ -185,9 +185,9 @@ exports.updatePlan = async (req, res, next) => {
       }
       await plan.update(updateObj)
 
-      // 이미지 수정(업로드된 파일이 있으면 PlanImgs 갱신)
+      // 이미지 수정 로직
+      // 1. 새 파일이 있으면 기존 이미지 삭제 후 새로 생성
       if (req.files && req.files.length > 0) {
-         // 기존 이미지 삭제
          await PlanImgs.destroy({ where: { planId } })
          const path = require('path')
          const uploadsRoot = path.join(__dirname, '..', 'uploads')
@@ -200,6 +200,23 @@ exports.updatePlan = async (req, res, next) => {
                mainImg: i === 0 ? 'Y' : 'N',
                planId: plan.id,
             })
+         }
+      } else if (req.body.existingImgUrls) {
+         // 2. 기존 이미지만 있을 때 mainImg 정보만 업데이트
+         let existingImgUrls = req.body.existingImgUrls
+         if (typeof existingImgUrls === 'string') {
+            try {
+               existingImgUrls = JSON.parse(existingImgUrls)
+            } catch (e) {
+               existingImgUrls = []
+            }
+         }
+         // 모든 기존 이미지 mainImg를 'N'으로 초기화 후, 대표이미지로 선택된 것만 'Y'로 변경
+         await PlanImgs.update({ mainImg: 'N' }, { where: { planId } })
+         for (const img of existingImgUrls) {
+            if (img.isMain) {
+               await PlanImgs.update({ mainImg: 'Y' }, { where: { planId, imgURL: img.imgURL } })
+            }
          }
       }
 

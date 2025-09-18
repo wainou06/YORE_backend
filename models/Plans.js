@@ -35,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
          data: {
             type: DataTypes.STRING(10),
             allowNull: false,
-            comment: '데이터 제공량 (MB, 무제한:999999)',
+            comment: '데이터 제공량 (GB, 무제한:999999)',
             validate: {
                isValidData(value) {
                   if (value !== '999999' && isNaN(value)) {

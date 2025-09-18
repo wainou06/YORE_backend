@@ -77,6 +77,12 @@ exports.markAsRead = async (req, res) => {
          if (req.user.access === 'user' && notification.userId !== req.user.id) {
             return res.status(403).json({ message: '권한 없음' })
          }
+         if (req.user.access === 'agency') {
+            const agency = await Agency.findOne({ where: { userId: req.user.id } })
+            if (!agency || notification.agencyId !== agency.id) {
+               return res.status(403).json({ message: '권한 없음' })
+            }
+         }
       }
       notification.isRead = true
       await notification.save()

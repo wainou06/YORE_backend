@@ -51,8 +51,8 @@ router.get('/profile', isAuthenticated, authController.getProfile)
 router.put('/profile', isAuthenticated, validate(updateProfileValidation), authController.updateProfile)
 router.put('/profile/agency', isAuthenticated, validate(updateAgencyValidation), authController.updateAgencyProfile)
 
-router.post('/change-password', isAuthenticated, authController.changePassword)
-router.post('/change-email', isAuthenticated, authController.changeEmail)
+router.post('/change-password', isAuthenticated, validate(changePasswordValidation), authController.changePassword)
+router.post('/change-email', isAuthenticated, validate([body('email').isEmail().withMessage('유효한 이메일을 입력해주세요.')]), authController.changeEmail)
 router.post('/change-birth', isAuthenticated, authController.changeBirth)
 
 // 카카오 가능 라우트 추가

@@ -326,9 +326,42 @@ exports.putPlanStatus = async (req, res, next) => {
          throw new ApiError(400, '요금제를 찾지 못했습니다.')
       }
 
+      const prevStatus = plan.status
+      const newStatus = req.query.status
       await plan.update({
-         status: req.query.status,
+         status: newStatus,
       })
+
+      // 상태 변경 알림: status가 변경된 경우에만 알림 전송
+      if (newStatus && prevStatus !== newStatus) {
+         try {
+            const agency = await Agency.findByPk(plan.agencyId)
+            if (agency) {
+               const userId = agency.userId
+               const Notifications = require('../models').Notifications
+               let message = ''
+               let title = '요금제 상태 변경'
+               let type = 'SYSTEM'
+               let targetUserType = 'AGENCY'
+               if (newStatus === 'active') message = `[${plan.name}] 요금제가 승인되었습니다.`
+               else if (newStatus === 'inactive') message = `[${plan.name}] 요금제가 거절되었습니다.`
+               else if (newStatus === 'pending') message = `[${plan.name}] 요금제가 승인 대기중입니다.`
+               if (message) {
+                  await Notifications.create({
+                     title,
+                     message,
+                     type,
+                     agencyId: agency.id,
+                     userId,
+                     isRead: false,
+                     targetUserType,
+                  })
+               }
+            }
+         } catch (e) {
+            console.error('알림 전송 실패:', e?.message, e?.stack)
+         }
+      }
 
       res.status(200).json({
          success: true,

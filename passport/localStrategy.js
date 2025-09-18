@@ -30,7 +30,6 @@ module.exports = () => {
 
                return done(null, userWithoutPassword)
             } catch (error) {
-               console.error(error)
                return done(error)
             }
          }

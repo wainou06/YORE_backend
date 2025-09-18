@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken')
 const { User, Agency, Admin } = require('../models')
 
-// 기본 인증 미들웨어 (사용자/관리자 토큰 분리)
 exports.isAuthenticated = async (req, res, next) => {
    try {
       const authHeader = req.headers.authorization
@@ -14,7 +13,6 @@ exports.isAuthenticated = async (req, res, next) => {
 
       const token = authHeader.split(' ')[1]
 
-      // 관리자 토큰: 'admin_' prefix 사용 (프론트/백엔드 모두 적용 필요)
       if (token.startsWith('admin_')) {
          const realToken = token.replace('admin_', '')
          const decoded = jwt.verify(realToken, process.env.JWT_SECRET)
@@ -29,7 +27,6 @@ exports.isAuthenticated = async (req, res, next) => {
          return next()
       }
 
-      // 일반 사용자 토큰
       const decoded = jwt.verify(token, process.env.JWT_SECRET)
       const user = await User.findOne({
          where: { id: decoded.id },
@@ -42,7 +39,6 @@ exports.isAuthenticated = async (req, res, next) => {
          })
       }
       req.user = user
-      console.log('[isAuthenticated] req.user:', req.user && req.user.toJSON ? req.user.toJSON() : req.user)
       return next()
    } catch (error) {
       if (error.name === 'TokenExpiredError') {
@@ -58,7 +54,6 @@ exports.isAuthenticated = async (req, res, next) => {
    }
 }
 
-// 관리자 권한 확인
 exports.isAdmin = (req, res, next) => {
    if (!req.admin) {
       return res.status(403).json({
@@ -69,32 +64,25 @@ exports.isAdmin = (req, res, next) => {
    next()
 }
 
-// 통신사 권한 확인
 exports.isAgency = async (req, res, next) => {
    try {
       if (!req.user || req.user.access !== 'agency') {
-         console.log('[isAgency] req.user:', req.user)
          return res.status(403).json({
             success: false,
             message: '통신사만 접근할 수 있습니다.',
          })
       }
 
-      // 통신사 정보 확인
       const agency = await Agency.findOne({ where: { userId: req.user.id } })
       if (!agency) {
-         console.log('[isAgency] Agency not found for userId:', req.user.id)
          return res.status(403).json({
             success: false,
             message: '등록된 통신사 정보가 없습니다.',
          })
       }
 
-      console.log('[isAgency] req.agency:', agency && agency.toJSON ? agency.toJSON() : agency)
-
-      // 통신사 정보를 req 객체에 추가
       req.agency = agency
-      req._agency = agency // multer 등 미들웨어로 인한 소실 방지
+      req._agency = agency
 
       next()
    } catch (error) {
@@ -105,13 +93,10 @@ exports.isAgency = async (req, res, next) => {
    }
 }
 
-// 선택적 인증 미들웨어
 exports.optionalAuth = async (req, res, next) => {
    const authHeader = req.headers.authorization
    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // 인증 헤더가 있으면 기존 인증 미들웨어 실행
       return exports.isAuthenticated(req, res, next)
    }
-   // 인증 헤더가 없으면 비로그인으로 처리
    next()
 }

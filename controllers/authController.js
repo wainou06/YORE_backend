@@ -17,7 +17,6 @@ exports.register = async (req, res, next) => {
          return res.status(400).json({ success: false, message: '이미 사용 중인 사용자 ID입니다.' })
       }
 
-      // 기업회원인 경우 사업자등록번호 중복 체크
       if (access === 'agency' && agency) {
          const existingAgency = await Agency.findOne({
             where: { businessNumber: agency.businessNumber },
@@ -30,7 +29,6 @@ exports.register = async (req, res, next) => {
       const sequelize = require('../models').sequelize
       const t = await sequelize.transaction()
       try {
-         // User 생성
          const newUser = await User.create(
             {
                email,
@@ -44,7 +42,6 @@ exports.register = async (req, res, next) => {
          )
 
          let newAgency = null
-         // 기업회원인 경우 Agency 테이블에도 저장
          if (access === 'agency' && agency) {
             newAgency = await Agency.create(
                {
@@ -55,7 +52,6 @@ exports.register = async (req, res, next) => {
             )
          }
 
-         // 일반회원만 웰컴쿠폰 발급
          if (access !== 'agency') {
             const welcomeCoupon = await Coupons.findOne({ where: { couponNm: '웰컴쿠폰' }, transaction: t })
             if (welcomeCoupon) {
@@ -73,7 +69,6 @@ exports.register = async (req, res, next) => {
 
          await t.commit()
 
-         // 비밀번호 제거 후 반환
          const userObj = newUser.get({ plain: true })
          delete userObj.password
          let agencyObj = null
@@ -100,18 +95,15 @@ exports.register = async (req, res, next) => {
 
 const passport = require('passport')
 exports.login = (req, res, next) => {
-   // passport-local 전략 사용
    passport.authenticate('local', { session: false }, (err, user, info) => {
       if (err) {
          logger.error(err.stack || err)
          return next(err)
       }
       if (!user) {
-         // info.message는 localStrategy에서 전달됨
          return res.status(401).json({ success: false, message: info && info.message ? info.message : '로그인 실패' })
       }
 
-      // userType 체크 (business/personal)
       const { userType } = req.body
       if (userType) {
          if (userType === 'business' && user.access !== 'agency') {
@@ -122,7 +114,6 @@ exports.login = (req, res, next) => {
          }
       }
 
-      // JWT 토큰 발급 (access 필드 포함)
       const token = jwt.sign({ id: user.id, access: user.access }, process.env.JWT_SECRET, { expiresIn: '1h' })
       res.json({
          success: true,
@@ -133,15 +124,13 @@ exports.login = (req, res, next) => {
    })(req, res, next)
 }
 
-// 카카오 컨트롤러
 const { createOrUpdateUser, generateJWT } = require('../utils/auth')
 exports.kakaoCallback = async (req, res) => {
    const code = req.query.code
    if (!code) return res.status(400).send('인가 코드 없음')
 
    try {
-      // 1. 카카오 토큰 발급
-      const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
+      const tokenResponse = await fetch(`${process.env.KAKAO_OAUTH_URL}`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
          body: new URLSearchParams({
@@ -155,8 +144,7 @@ exports.kakaoCallback = async (req, res) => {
       const tokenData = await tokenResponse.json()
       const accessToken = tokenData.access_token
 
-      // 2. 카카오 사용자 정보 요청
-      const userResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
+      const userResponse = await fetch(`${process.env.KAKAO_API_URL}`, {
          method: 'GET',
          headers: { Authorization: `Bearer ${accessToken}` },
       })
@@ -166,18 +154,15 @@ exports.kakaoCallback = async (req, res) => {
       const tempEmail = kakaoUser.id + '@kakao.com'
       const name = kakaoUser.kakao_account.profile.nickname
 
-      // 3. DB 처리
       const user = await createOrUpdateUser({
          userid: `kakao_${kakaoUser.id}`,
          email: tempEmail,
          name,
       })
 
-      // 4. JWT 발급 후 프론트로 redirect
       const token = generateJWT(user)
       res.redirect(`${process.env.FRONTEND_URL}/auth/kakao/callback?token=${token}&name=${encodeURIComponent(name)}`)
    } catch (error) {
-      console.error(error)
       res.redirect(`${process.env.FRONTEND_URL}/auth/kakao/fail`)
    }
 }
@@ -214,7 +199,6 @@ exports.getProfile = async (req, res, next) => {
 
 exports.logout = (req, res, next) => {
    try {
-      // JWT를 사용하는 경우 클라이언트에서 토큰을 삭제하도록 안내
       res.json({ success: true, message: '로그아웃 되었습니다.' })
    } catch (error) {
       logger.error(error.stack || error)
@@ -260,7 +244,7 @@ exports.updateAgencyProfile = async (req, res, next) => {
 
       await agency.update({
          agencyName: agencyName || agency.agencyName,
-         businessNumber: businessNumber || agency.businessNumber, // 👈 추가
+         businessNumber: businessNumber || agency.businessNumber,
          managerName: managerName || agency.managerName,
       })
 
@@ -280,11 +264,11 @@ exports.changePassword = async (req, res, next) => {
          return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
       }
 
-      // 현재 비밀번호 확인
       const isMatch = await user.validatePassword(currentPassword)
       if (!isMatch) {
          return res.status(400).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' })
       }
+
 
       // 새 비밀번호 유효성 검사 추가
       if (!newPassword || newPassword.length < 6) {
@@ -302,22 +286,19 @@ exports.changePassword = async (req, res, next) => {
    }
 }
 
-// 변경된 authController.js
 exports.changeEmail = async (req, res, next) => {
    try {
-      const { email } = req.body // 👈 newEmail → email로 변경
+      const { email } = req.body
 
       if (!email) {
          return res.status(400).json({ success: false, message: '이메일이 필요합니다.' })
       }
 
-      // 이미 존재하는 이메일 체크
       const exists = await User.findOne({ where: { email } })
       if (exists) {
          return res.status(400).json({ success: false, message: '이미 존재하는 이메일입니다.' })
       }
 
-      // 현재 로그인한 유저 기준으로 업데이트
       const user = await User.findByPk(req.user.id)
       if (!user) {
          return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
@@ -333,10 +314,8 @@ exports.changeEmail = async (req, res, next) => {
    }
 }
 
-// 생일 변경
 exports.changeBirth = async (req, res, next) => {
    try {
-      console.log('changeBirth 요청 body:', req.body) // 👈 확인용
       const { birth } = req.body
       if (!birth) {
          return res.status(400).json({ success: false, message: '생일이 필요합니다.' })
@@ -361,7 +340,6 @@ exports.changeBirth = async (req, res, next) => {
    }
 }
 
-// 비밀번호 찾기
 exports.findPassword = async (req, res) => {
    try {
       const { method, value } = req.body
@@ -376,14 +354,12 @@ exports.findPassword = async (req, res) => {
          return res.json({ success: false, message: '해당 사용자가 존재하지 않습니다.' })
       }
 
-      // 임시 비밀번호 생성
       const tempPassword = Math.random().toString(36).slice(-8)
       user.password = await bcrypt.hash(tempPassword, 10)
       await user.save()
 
       return res.json({ success: true, tempPassword })
    } catch (err) {
-      console.error(err)
       res.status(500).json({ success: false, message: '서버 오류 발생' })
    }
 }

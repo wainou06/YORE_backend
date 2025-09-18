@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
          },
          password: {
             type: DataTypes.STRING,
-            allowNull: true, // 카카오 로그인의 경우 비밀번호가 없을 수 있음
+            allowNull: true,
          },
          name: {
             type: DataTypes.STRING(50),
@@ -71,7 +71,6 @@ module.exports = (sequelize, DataTypes) => {
             },
             beforeUpdate: async (user) => {
                if (user.changed('password')) {
-                  // 비밀번호가 평문인지 확인 (간단하게 60자 이상이면 해시로 간주)
                   if (user.password.length < 60) {
                      const salt = await bcrypt.genSalt(10)
                      user.password = await bcrypt.hash(user.password, salt)

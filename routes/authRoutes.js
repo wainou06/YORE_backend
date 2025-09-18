@@ -820,7 +820,7 @@ router.get('/kakao/callback', authController.kakaoCallback)
  *                 tempPassword:
  *                   type: string
  *                   example: a1b2c3d4
- *       200:
+ *       404:
  *         description: 사용자 미존재
  *         content:
  *           application/json:

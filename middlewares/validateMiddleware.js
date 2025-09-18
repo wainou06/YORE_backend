@@ -11,7 +11,7 @@ exports.validate = (validations) => {
 
       res.status(400).json({
          success: false,
-         message: '입력값 검증 실패',
+         message: errors.array()[0]?.msg || '입력값 검증 실패',
          errors: errors.array(),
       })
    }

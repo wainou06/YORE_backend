@@ -786,6 +786,65 @@ router.get('/kakao/callback', authController.kakaoCallback)
 
 /**
  * @swagger
+ * /auth/delete-account:
+ *   delete:
+ *     summary: 회원 탈퇴
+ *     tags:
+ *       - User
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 회원 탈퇴 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 회원 탈퇴가 완료되었습니다.
+ *       401:
+ *         description: 인증되지 않은 사용자
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 인증이 필요합니다.
+ *       500:
+ *         description: 서버 오류
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 회원 탈퇴 중 오류가 발생했습니다.
+ *
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ */
+router.delete('/delete-account', isAuthenticated, authController.deleteAccount)
+
+/**
+ * @swagger
  * /auth/find-password:
  *   post:
  *     summary: 비밀번호 찾기 (임시 비밀번호 발급)

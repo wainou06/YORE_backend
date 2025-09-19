@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const { User, Agency, Coupons, UserCoupon } = require('../models')
+const { User, Agency, Coupons, UserCoupon, Transactions, UserServices, sequelize } = require('../models')
 const logger = require('../utils/logger')
 const bcrypt = require('bcryptjs')
 
@@ -363,5 +363,37 @@ exports.findPassword = async (req, res) => {
       return res.json({ success: true, tempPassword })
    } catch (err) {
       res.status(500).json({ success: false, message: '서버 오류 발생' })
+   }
+}
+
+exports.deleteAccount = async (req, res) => {
+   const userId = req.user.id
+
+   try {
+      await sequelize.transaction(async (t) => {
+         await UserServices.destroy({
+            where: { userId },
+            transaction: t,
+         })
+
+         await Transactions.destroy({
+            where: { userId },
+            transaction: t,
+         })
+
+         await Agency.destroy({
+            where: { userId },
+            transaction: t,
+         })
+
+         await User.destroy({
+            where: { id: userId },
+            transaction: t,
+         })
+      })
+
+      return res.status(200).json({ success: true, message: '회원 탈퇴가 완료되었습니다.' })
+   } catch (error) {
+      return res.status(500).json({ success: false, message: '회원 탈퇴 중 오류가 발생했습니다.' })
    }
 }

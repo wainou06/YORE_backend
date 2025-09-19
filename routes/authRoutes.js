@@ -30,12 +30,14 @@ const updateAgencyValidation = [body('agencyName').optional().notEmpty().withMes
 const changePasswordValidation = [
    body('currentPassword').notEmpty().withMessage('현재 비밀번호를 입력해주세요.'),
    body('newPassword').isLength({ min: 6 }).withMessage('새 비밀번호는 최소 6자 이상이어야 합니다.'),
-   body('confirmPassword').custom((value, { req }) => {
-      if (value !== req.body.newPassword) {
-         throw new Error('비밀번호가 일치하지 않습니다.')
-      }
-      return true
-   }),
+   body('confirmPassword')
+      .optional()
+      .custom((value, { req }) => {
+         if (value && value !== req.body.newPassword) {
+            throw new Error('비밀번호가 일치하지 않습니다.')
+         }
+         return true
+      }),
 ]
 
 /**

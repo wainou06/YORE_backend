@@ -59,7 +59,6 @@ exports.getNotifications = async (req, res) => {
       })
       res.json(notifications)
    } catch (err) {
-      console.error('[알림 목록 조회 오류]', err)
       res.status(500).json({ message: err.message, stack: err.stack })
    }
 }

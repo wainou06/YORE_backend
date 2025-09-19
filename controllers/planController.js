@@ -165,7 +165,6 @@ exports.updatePlan = async (req, res, next) => {
       } else if (typeof req.body.planData === 'object' && req.body.planData !== null) {
          planData = req.body.planData
       }
-      console.log('planData.services:', planData.services)
 
       // 권한 체크: 관리자 or (통신사 본인 소속)
       let plan = await Plans.findByPk(planId)

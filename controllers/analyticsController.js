@@ -1,8 +1,9 @@
 const { ServiceAnalytics, AdditionalServices, Agency } = require('../models')
 const { User, Transactions, Plans, UserPlan } = require('../models')
 const ApiError = require('../utils/apiError')
-const { Op, where } = require('sequelize')
-const { nowDateMinus, yearMonthDay, dayLeft, dayMinusDay } = require('../utils/dateSet')
+const { Op } = require('sequelize')
+const fs = require('fs')
+const { nowDateMinus, yearMonthDay, dayMinusDay } = require('../utils/dateSet')
 
 exports.getHomeStatus = async (req, res, next) => {
    try {
@@ -124,7 +125,6 @@ exports.getUserStatus = async (req, res, next) => {
          message: '데이터를 가져왔어요',
       })
    } catch (error) {
-      console.log(`에러가 났네요. ${error}`)
       next(error)
    }
 }
@@ -359,7 +359,9 @@ exports.putPlanStatus = async (req, res, next) => {
                }
             }
          } catch (e) {
-            console.error('알림 전송 실패:', e?.message, e?.stack)
+            fs.appendFile('logs/error.log', `[${new Date().toISOString()}] 알림 전송 실패: ${e?.message}\n${e?.stack}\n`, (err) => {
+               /* 파일 기록 실패시 무시 */
+            })
          }
       }
 

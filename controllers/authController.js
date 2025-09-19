@@ -265,10 +265,7 @@ exports.changePassword = async (req, res, next) => {
       }
 
       //
-      console.log('입력한 현재 비번:', currentPassword)
-      console.log('DB 저장된 해시:', user.password)
       const isMatch = await user.validatePassword(currentPassword)
-      console.log('비교 결과:', isMatch)
       //
 
       if (!isMatch) {

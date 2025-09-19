@@ -21,7 +21,7 @@ async function startServer() {
       logger.info('Database connection has been established successfully.')
 
       // 개발/배포 환경 모두 DB 동기화 및 시드 실행
-      await sequelize.sync({ force: false })
+      await sequelize.sync({ force: false, alter: false })
       logger.info('Database synchronized')
       await seed()
 

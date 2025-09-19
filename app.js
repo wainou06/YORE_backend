@@ -103,7 +103,7 @@ authRoutes.get('/kakao/callback', async (req, res) => {
    if (!code) return res.status(400).send('인가 코드 없음')
 
    try {
-      const tokenResponse = await axios.post('https://kauth.kakao.com/oauth/token', null, {
+      const tokenResponse = await axios.post(`${process.env.KAKAO_OAUTH_URL}`, null, {
          params: {
             grant_type: 'authorization_code',
             client_id: process.env.KAKAO_CLIENT_ID,
@@ -115,7 +115,7 @@ authRoutes.get('/kakao/callback', async (req, res) => {
 
       const accessToken = tokenResponse.data.access_token
 
-      const userResponse = await axios.get('https://kapi.kakao.com/v2/user/me', {
+      const userResponse = await axios.get(`${process.env.KAKAO_API_URL}`, {
          headers: { Authorization: `Bearer ${accessToken}` },
       })
 

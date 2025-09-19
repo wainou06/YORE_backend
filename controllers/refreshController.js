@@ -21,7 +21,6 @@ exports.refresh = async (req, res) => {
          return res.json({ success: true, token })
       })
    } catch (error) {
-      console.error(error)
       res.status(500).json({ success: false, message: '서버 오류' })
    }
 }

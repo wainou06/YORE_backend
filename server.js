@@ -20,20 +20,14 @@ async function startServer() {
       await sequelize.authenticate()
       logger.info('Database connection has been established successfully.')
 
-      // Sync database in development mode
-      if (process.env.NODE_ENV === 'development') {
-         await sequelize.sync({ force: false })
-         logger.info('Database synchronized')
-         // DB 동기화 후 기본 데이터 시드
-         await seed()
-      }
+      // 개발/배포 환경 모두 DB 동기화 및 시드 실행
+      await sequelize.sync({ force: false })
+      logger.info('Database synchronized')
+      await seed()
 
       app.listen(PORT, () => {
          logger.info(`Server is running on port ${PORT}`)
-         // 개발 환경에서 서버 시작 시 생일쿠폰 지급 테스트 실행
-         if (process.env.NODE_ENV === 'development') {
-            runBirthdayCouponScheduler()
-         }
+         runBirthdayCouponScheduler()
       })
    } catch (error) {
       logger.error('Unable to connect to the database:', error)

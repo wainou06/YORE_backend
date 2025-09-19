@@ -1,18 +1,27 @@
 const { ServiceAnalytics, AdditionalServices, Agency } = require('../models')
 const { User, Transactions, Plans, UserPlan } = require('../models')
 const ApiError = require('../utils/apiError')
-const { Op } = require('sequelize')
+const { Op, where } = require('sequelize')
 const fs = require('fs')
 const { nowDateMinus, yearMonthDay, dayMinusDay } = require('../utils/dateSet')
 
 exports.getHomeStatus = async (req, res, next) => {
    try {
-      const sevnDaysAgo = nowDateMinus(1)
+      const sevnDaysAgo = nowDateMinus(7)
+      const fourteenDaysAgo = nowDateMinus(14)
 
       const totalUsers = await User.count()
       const totalRevenue = await Transactions.sum('amount', {
          where: {
             status: 'success',
+         },
+      })
+      const newTotalRevenue = await Transactions.sum('amount', {
+         where: {
+            status: 'success',
+            createdAt: {
+               [Op.gte]: sevnDaysAgo,
+            },
          },
       })
       const newUsers = await User.count({
@@ -22,8 +31,23 @@ exports.getHomeStatus = async (req, res, next) => {
             },
          },
       })
+      const newNewUsers = await User.count({
+         where: {
+            createdAt: {
+               [Op.between]: [fourteenDaysAgo, sevnDaysAgo],
+            },
+         },
+      })
       const transactionsCount = await Transactions.count()
-      const averageOrder = totalRevenue / transactionsCount
+      const pastTransactionsCount = await Transactions.count({
+         where: {
+            createdAt: {
+               [Op.gte]: sevnDaysAgo,
+            },
+         },
+      })
+      const averageOrder = (totalRevenue - newTotalRevenue) / (transactionsCount - pastTransactionsCount)
+      const pastAverageOrder = newTotalRevenue / pastTransactionsCount
       const recentOrdersData = await Transactions.findAll({
          order: [['date', 'DESC']],
          limit: 8,
@@ -63,6 +87,9 @@ exports.getHomeStatus = async (req, res, next) => {
          newUsers: newUsers || 0,
          averageOrder: averageOrder || 0,
          recentOrders: recentOrders || null,
+         newTotalRevenue: newTotalRevenue || 0,
+         newNewUsers: newNewUsers || 0,
+         pastAverageOrder: pastAverageOrder || 0,
       }
 
       res.status(200).json({

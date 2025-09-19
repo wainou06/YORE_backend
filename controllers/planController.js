@@ -1,8 +1,9 @@
-const { Plans, PlanImgs, Agency, AdditionalServices } = require('../models')
+const { Plans, PlanImgs, Agency, AdditionalServices, sequelize } = require('../models')
 const ApiError = require('../utils/apiError')
 const path = require('path')
 
 exports.createPlan = async (req, res, next) => {
+   const t = await sequelize.transaction()
    try {
       let planData = req.body
       if (req.body.planData) {
@@ -32,56 +33,63 @@ exports.createPlan = async (req, res, next) => {
       }
 
       // Plans 생성
-      const plan = await Plans.create({
-         name,
-         agencyId,
-         voice,
-         data,
-         sms,
-         type,
-         age,
-         basePrice,
-         finalPrice,
-         dis,
-         status,
-         description,
-         benefits,
-      })
+      const plan = await Plans.create(
+         {
+            name,
+            agencyId,
+            voice,
+            data,
+            sms,
+            type,
+            age,
+            basePrice,
+            finalPrice,
+            dis,
+            status,
+            description,
+            benefits,
+         },
+         { transaction: t }
+      )
 
       // PlanImgs(이미지) 생성: req.files 기반
       for (let i = 0; i < req.files.length; i++) {
          const file = req.files[i]
-         // file.path: .../uploads/20250913/파일명.png
-         // uploads 폴더 기준 상대경로 추출
          const uploadsRoot = path.join(__dirname, '..', 'uploads')
          let relativePath = path.relative(uploadsRoot, file.path).replace(/\\/g, '/')
-         // imgURL: /uploads/20250913/파일명.png
-         await PlanImgs.create({
-            originName: file.originalname,
-            imgURL: `/uploads/${relativePath}`,
-            mainImg: i === 0 ? 'Y' : 'N', // 첫 번째 이미지를 대표로
-            planId: plan.id,
-         })
+         await PlanImgs.create(
+            {
+               originName: file.originalname,
+               imgURL: `/uploads/${relativePath}`,
+               mainImg: i === 0 ? 'Y' : 'N',
+               planId: plan.id,
+            },
+            { transaction: t }
+         )
       }
 
       // (선택) 부가서비스 생성
       if (planData.services && Array.isArray(planData.services)) {
          for (const svc of planData.services) {
-            // provider, fee 모두 프론트에서 받아온 값만 사용, 없으면 생성하지 않음
             if (svc.name && svc.provider && svc.fee) {
-               await AdditionalServices.create({
-                  name: svc.name,
-                  provider: svc.provider,
-                  planId: plan.id,
-                  fee: svc.fee,
-                  description: svc.description || null,
-               })
+               await AdditionalServices.create(
+                  {
+                     name: svc.name,
+                     provider: svc.provider,
+                     planId: plan.id,
+                     fee: svc.fee,
+                     description: svc.description || null,
+                  },
+                  { transaction: t }
+               )
             }
          }
       }
 
+      await t.commit()
       res.status(201).json({ status: 'success', data: plan })
    } catch (error) {
+      await t.rollback()
       next(error)
    }
 }
@@ -153,6 +161,7 @@ exports.getPlanById = async (req, res, next) => {
 
 // 요금제 수정 (관리자/통신사만, 부가서비스/이미지 포함)
 exports.updatePlan = async (req, res, next) => {
+   const t = await sequelize.transaction()
    try {
       const planId = req.params.id
       let planData = req.body
@@ -167,11 +176,15 @@ exports.updatePlan = async (req, res, next) => {
       }
 
       // 권한 체크: 관리자 or (통신사 본인 소속)
-      let plan = await Plans.findByPk(planId)
-      if (!plan) return res.status(404).json({ message: '요금제를 찾을 수 없습니다.' })
+      let plan = await Plans.findByPk(planId, { transaction: t })
+      if (!plan) {
+         await t.rollback()
+         return res.status(404).json({ message: '요금제를 찾을 수 없습니다.' })
+      }
       if (!req.admin) {
-         const agency = await Agency.findOne({ where: { userId: req.user.id } })
+         const agency = await Agency.findOne({ where: { userId: req.user.id }, transaction: t })
          if (!agency || plan.agencyId !== agency.id) {
+            await t.rollback()
             return res.status(403).json({ message: '수정 권한이 없습니다.' })
          }
       }
@@ -182,23 +195,26 @@ exports.updatePlan = async (req, res, next) => {
       for (const key of allowedFields) {
          if (planData[key] !== undefined) updateObj[key] = planData[key]
       }
-      await plan.update(updateObj)
+      await plan.update(updateObj, { transaction: t })
 
       // 이미지 수정 로직
       // 1. 새 파일이 있으면 기존 이미지 삭제 후 새로 생성
       if (req.files && req.files.length > 0) {
-         await PlanImgs.destroy({ where: { planId } })
+         await PlanImgs.destroy({ where: { planId }, transaction: t })
          const path = require('path')
          const uploadsRoot = path.join(__dirname, '..', 'uploads')
          for (let i = 0; i < req.files.length; i++) {
             const file = req.files[i]
             let relativePath = path.relative(uploadsRoot, file.path).replace(/\\/g, '/')
-            await PlanImgs.create({
-               originName: file.originalname,
-               imgURL: `/uploads/${relativePath}`,
-               mainImg: i === 0 ? 'Y' : 'N',
-               planId: plan.id,
-            })
+            await PlanImgs.create(
+               {
+                  originName: file.originalname,
+                  imgURL: `/uploads/${relativePath}`,
+                  mainImg: i === 0 ? 'Y' : 'N',
+                  planId: plan.id,
+               },
+               { transaction: t }
+            )
          }
       } else if (req.body.existingImgUrls) {
          // 2. 기존 이미지만 있을 때 mainImg 정보만 업데이트
@@ -211,10 +227,10 @@ exports.updatePlan = async (req, res, next) => {
             }
          }
          // 모든 기존 이미지 mainImg를 'N'으로 초기화 후, 대표이미지로 선택된 것만 'Y'로 변경
-         await PlanImgs.update({ mainImg: 'N' }, { where: { planId } })
+         await PlanImgs.update({ mainImg: 'N' }, { where: { planId }, transaction: t })
          for (const img of existingImgUrls) {
             if (img.isMain) {
-               await PlanImgs.update({ mainImg: 'Y' }, { where: { planId, imgURL: img.imgURL } })
+               await PlanImgs.update({ mainImg: 'Y' }, { where: { planId, imgURL: img.imgURL }, transaction: t })
             }
          }
       }
@@ -222,7 +238,7 @@ exports.updatePlan = async (req, res, next) => {
       // 부가서비스 부분 수정 (update/insert/delete)
       if (Array.isArray(planData.services)) {
          // 1. 기존 DB의 부가서비스 id 목록 조회
-         const existingServices = await AdditionalServices.findAll({ where: { planId } })
+         const existingServices = await AdditionalServices.findAll({ where: { planId }, transaction: t })
          const existingIds = existingServices.map((svc) => svc.id)
 
          // 2. 프론트에서 온 id 목록
@@ -231,7 +247,7 @@ exports.updatePlan = async (req, res, next) => {
          // 3. 삭제 대상: 기존에는 있었으나 프론트에서 안 온 id
          const toDelete = existingIds.filter((id) => !incomingIds.includes(id))
          if (toDelete.length > 0) {
-            await AdditionalServices.destroy({ where: { id: toDelete } })
+            await AdditionalServices.destroy({ where: { id: toDelete }, transaction: t })
          }
 
          // 4. update & create
@@ -250,49 +266,61 @@ exports.updatePlan = async (req, res, next) => {
                         fee: svc.fee,
                         description: svc.description || null,
                      },
-                     { where: { id: svc.id, planId } }
+                     { where: { id: svc.id, planId }, transaction: t }
                   )
                } else {
                   // create
-                  await AdditionalServices.create({
-                     name: svc.name,
-                     provider,
-                     planId: plan.id,
-                     fee: svc.fee,
-                     description: svc.description || null,
-                  })
+                  await AdditionalServices.create(
+                     {
+                        name: svc.name,
+                        provider,
+                        planId: plan.id,
+                        fee: svc.fee,
+                        description: svc.description || null,
+                     },
+                     { transaction: t }
+                  )
                }
             }
          }
       }
 
+      await t.commit()
       res.json({ status: 'success', data: plan })
    } catch (error) {
+      await t.rollback()
       next(error)
    }
 }
 
 // 요금제 삭제 (관리자/통신사만, 부가서비스 포함)
 exports.deletePlan = async (req, res, next) => {
+   const t = await sequelize.transaction()
    try {
       const planId = req.params.id
-      let plan = await Plans.findByPk(planId)
-      if (!plan) return res.status(404).json({ message: '요금제를 찾을 수 없습니다.' })
+      let plan = await Plans.findByPk(planId, { transaction: t })
+      if (!plan) {
+         await t.rollback()
+         return res.status(404).json({ message: '요금제를 찾을 수 없습니다.' })
+      }
       if (!req.admin) {
          // 통신사 본인 소속만
-         const agency = await Agency.findOne({ where: { userId: req.user.id } })
+         const agency = await Agency.findOne({ where: { userId: req.user.id }, transaction: t })
          if (!agency || plan.agencyId !== agency.id) {
+            await t.rollback()
             return res.status(403).json({ message: '삭제 권한이 없습니다.' })
          }
       }
       // 부가서비스 먼저 삭제
-      await AdditionalServices.destroy({ where: { planId } })
+      await AdditionalServices.destroy({ where: { planId }, transaction: t })
       // 이미지도 함께 삭제
-      await PlanImgs.destroy({ where: { planId } })
+      await PlanImgs.destroy({ where: { planId }, transaction: t })
       // 요금제 삭제
-      await plan.destroy()
+      await plan.destroy({ transaction: t })
+      await t.commit()
       res.json({ status: 'success' })
    } catch (error) {
+      await t.rollback()
       next(error)
    }
 }

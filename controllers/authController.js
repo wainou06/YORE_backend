@@ -264,11 +264,13 @@ exports.changePassword = async (req, res, next) => {
          return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' })
       }
 
+      //
       const isMatch = await user.validatePassword(currentPassword)
+      //
+
       if (!isMatch) {
          return res.status(400).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' })
       }
-
 
       // 새 비밀번호 유효성 검사 추가
       if (!newPassword || newPassword.length < 6) {
@@ -355,7 +357,7 @@ exports.findPassword = async (req, res) => {
       }
 
       const tempPassword = Math.random().toString(36).slice(-8)
-      user.password = await bcrypt.hash(tempPassword, 10)
+      user.password = tempPassword
       await user.save()
 
       return res.json({ success: true, tempPassword })

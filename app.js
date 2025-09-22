@@ -20,6 +20,7 @@ const notificationRoutes = require('./routes/notificationRoutes')
 const userPlanRoutes = require('./routes/userPlanRoutes')
 const transactionRoutes = require('./routes/transactionRoutes')
 const adminRoutes = require('./routes/adminRoutes')
+const userServicesRoutes = require('./routes/userServicesRoutes')
 const agencyRoutes = require('./routes/agencyRoutes')
 const errorMiddleware = require('./middlewares/errorMiddleware')
 
@@ -148,6 +149,7 @@ app.use('/notifications', notificationRoutes)
 app.use('/user-plans', userPlanRoutes)
 app.use('/transactions', transactionRoutes)
 app.use('/admin', adminRoutes)
+app.use('/user-services', userServicesRoutes)
 
 app.use(errorMiddleware)
 
